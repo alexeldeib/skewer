@@ -50,6 +50,8 @@ const (
 	MemoryGB = "MemoryGB"
 	// HyperVGenerations identifies the hyper-v generations this vm sku supports.
 	HyperVGenerations = "HyperVGenerations"
+	// EncryptionAtHost identifies the capability for accelerated networking support.
+	EncryptionAtHost = "EncryptionAtHostSupported"
 )
 
 // HasCapability return true for a capability which can be either
