@@ -7,6 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - run: "go test -v -race -coverprofile=coverage.out -covermode=atomic ./..."
-    - run: "go tool cover -func=coverage.out -o coverage.txt" 
+    - run: |
+        go get github.com/axw/gocov/...
+        go get github.com/AlekSi/gocov-xml
+        go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        gocov convert coverage.out | gocov-xml > coverage.xml
+        rm coverage.out
     - uses: codecov/codecov-action@v1
