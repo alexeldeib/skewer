@@ -32,7 +32,19 @@ func Test_Data(t *testing.T) {
 		t.Error(err)
 	}
 
-	chunkedClient, err := newSuccessfulFakeResourceClient(chunk(dataWrapper.Value, 10))
+	chunkedResourceClient, err := newSuccessfulFakeResourceClient(chunk(dataWrapper.Value, 10))
+	if err != nil {
+		t.Error(err)
+	}
+
+	resourceProviderClient, err := newSuccessfulFakeResourceProviderClient([][]compute.ResourceSku{
+		dataWrapper.Value,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	chunkedResourceProviderClient, err := newSuccessfulFakeResourceProviderClient(chunk(dataWrapper.Value, 10))
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,14 +59,24 @@ func Test_Data(t *testing.T) {
 				return NewCache(ctx, resourceClient, WithLocation("eastus"))
 			},
 		},
+		"chunkedResourceClient": {
+			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
+				return NewCache(ctx, chunkedResourceClient, WithLocation("eastus"))
+			},
+		},
+		"resourceProviderClient": {
+			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
+				return NewCache(ctx, resourceProviderClient, WithLocation("eastus"))
+			},
+		},
+		"chunkedResourceProviderClient": {
+			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
+				return NewCache(ctx, chunkedResourceProviderClient, WithLocation("eastus"))
+			},
+		},
 		"wrappedClient": {
 			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
 				return NewCacheWithWrappedClient(ctx, fakeClient, WithLocation("eastus"))
-			},
-		},
-		"chunkedClient": {
-			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
-				return NewCache(ctx, chunkedClient, WithLocation("eastus"))
 			},
 		},
 	}

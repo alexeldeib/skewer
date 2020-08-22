@@ -81,6 +81,45 @@ func newSuccessfulFakeResourceClient(skuLists [][]compute.ResourceSku) (*fakeRes
 	}, nil
 }
 
+// fakeResourceProviderClient is a fake client for the real Azure types. It
+// returns a result iterator and can test against arbitrary sequences of
+// return pages, injecting failure. This uses the
+// ResourceProviderSignature for convenience.
+type fakeResourceProviderClient struct {
+	res compute.ResourceSkusResultIterator
+	err error
+}
+
+func (f *fakeResourceProviderClient) ListComplete(ctx context.Context, filter string) (compute.ResourceSkusResultIterator, error) {
+	if f.err != nil {
+		return compute.ResourceSkusResultIterator{}, f.err
+	}
+	return f.res, nil
+}
+
+// nolint:deadcode,unused
+func newFailingFakeResourceProviderClient(reterr error) *fakeResourceProviderClient {
+	return &fakeResourceProviderClient{
+		res: compute.ResourceSkusResultIterator{},
+		err: reterr,
+	}
+}
+
+// newSuccessfulFakeResourceProviderClient takes a list of sku lists and returns
+// a ResourceProviderClient which iterates over all of them, mapping each sku
+// list to a page of values.
+func newSuccessfulFakeResourceProviderClient(skuLists [][]compute.ResourceSku) (*fakeResourceProviderClient, error) {
+	iterator, err := newFakeResourceSkusResultIterator(skuLists)
+	if err != nil {
+		return nil, err
+	}
+
+	return &fakeResourceProviderClient{
+		res: iterator,
+		err: nil,
+	}, nil
+}
+
 // newFakeResourceSkusResultIterator takes a list of sku lists and
 // returns an iterator over all items, mapping each sku
 // list to a page of values.
