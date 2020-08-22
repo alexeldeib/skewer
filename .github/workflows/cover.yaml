@@ -7,9 +7,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - run: |
+    - name: setup filesystem
+      run: |
+        go env
+        mkdir -p ${GITHUB_WORKSPACE}/bin
+        mkdir -p ${GITHUB_WORKSPACE}/tmp
+    - name: install gocov
+      run: |
+        go env
+        mkdir -p ${GITHUB_WORKSPACE}/tmp/gocov
+        pushd ${GITHUB_WORKSPACE}/tmp/gocov
+        go mod init tmp
         go get github.com/axw/gocov/...
+        cp $(go env GOPATH)/bin/gocov ${GITHUB_WORKSPACE}/bin/gocov
+        popd
+        rm -rf ${GITHUB_WORKSPACE}/tmp/gocov
+        gocov
+    - name: install gocov-xml
+      run: |
+        go env
+        mkdir -p ${GITHUB_WORKSPACE}/tmp/gocov-xml
+        pushd ${GITHUB_WORKSPACE}/tmp/gocov-xml
+        go mod init tmp
         go get github.com/AlekSi/gocov-xml
+        cp $(go env GOPATH)/bin/gocov-xml ${GITHUB_WORKSPACE}/bin/gocov-xml
+        popd
+        rm -rf ${GITHUB_WORKSPACE}/tmp/gocov
+        gocov-xml -h
+    - run: |
+        export PATH=$PATH:${GITHUB_WORKSPACE}/bin
         go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
         gocov convert coverage.out | gocov-xml > coverage.xml
         rm coverage.out
