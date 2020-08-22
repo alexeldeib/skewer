@@ -14,6 +14,7 @@ jobs:
         mkdir -p ${GITHUB_WORKSPACE}/tmp
     - name: install gocov
       run: |
+        export PATH=$PATH:${GITHUB_WORKSPACE}/bin
         go env
         mkdir -p ${GITHUB_WORKSPACE}/tmp/gocov
         pushd ${GITHUB_WORKSPACE}/tmp/gocov
@@ -25,6 +26,7 @@ jobs:
         gocov
     - name: install gocov-xml
       run: |
+        export PATH=$PATH:${GITHUB_WORKSPACE}/bin
         go env
         mkdir -p ${GITHUB_WORKSPACE}/tmp/gocov-xml
         pushd ${GITHUB_WORKSPACE}/tmp/gocov-xml
