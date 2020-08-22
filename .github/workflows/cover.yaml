@@ -23,7 +23,7 @@ jobs:
         cp $(go env GOPATH)/bin/gocov ${GITHUB_WORKSPACE}/bin/gocov
         popd
         rm -rf ${GITHUB_WORKSPACE}/tmp/gocov
-        gocov
+        file ${GITHUB_WORKSPACE}/bin/gocov
     - name: install gocov-xml
       run: |
         export PATH=$PATH:${GITHUB_WORKSPACE}/bin
@@ -35,7 +35,7 @@ jobs:
         cp $(go env GOPATH)/bin/gocov-xml ${GITHUB_WORKSPACE}/bin/gocov-xml
         popd
         rm -rf ${GITHUB_WORKSPACE}/tmp/gocov
-        gocov-xml -h
+        file ${GITHUB_WORKSPACE}/bin/gocov-xml
     - run: |
         export PATH=$PATH:${GITHUB_WORKSPACE}/bin
         go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
