@@ -225,7 +225,7 @@ type FilterFn func(*SKU) bool
 // ResourceTypeFilter produces a filter function for any resource type.
 func ResourceTypeFilter(resourceType string) func(*SKU) bool {
 	return func(s *SKU) bool {
-		return IsResourceType(s, resourceType)
+		return s.IsResourceType(resourceType)
 	}
 }
 

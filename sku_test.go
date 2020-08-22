@@ -206,7 +206,7 @@ func Test_SKU_IsResourceType(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			sku := SKU(tc.sku)
-			if diff := cmp.Diff(tc.expect, IsResourceType(&sku, tc.resourceType)); diff != "" {
+			if diff := cmp.Diff(tc.expect, sku.IsResourceType(tc.resourceType)); diff != "" {
 				t.Error(diff)
 			}
 		})

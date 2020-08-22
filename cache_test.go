@@ -106,7 +106,7 @@ func Test_Filter(t *testing.T) {
 					ResourceType: to.StringPtr("match"),
 				},
 			},
-			condition: func(s *SKU) bool { return !IsResourceType(s, "match") },
+			condition: func(s *SKU) bool { return !s.IsResourceType("match") },
 			expected: []compute.ResourceSku{
 				{
 					ResourceType: to.StringPtr("nomatch"),

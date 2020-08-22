@@ -117,7 +117,7 @@ func (s *SKU) HasCapabilityWithCapacity(name string, value int64) (bool, error) 
 // value as its resource type. This may be used to filter using values
 // such as "virtualMachines", "disks", "availabilitySets", "snapshots",
 // and "hostGroups/hosts".
-func IsResourceType(s *SKU, t string) bool {
+func (s *SKU) IsResourceType(t string) bool {
 	return s.ResourceType != nil && strings.EqualFold(*s.ResourceType, t)
 }
 
