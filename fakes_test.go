@@ -50,7 +50,8 @@ func (f *fakeResourceClient) ListComplete(ctx context.Context, filter string) (c
 	return f.res, nil
 }
 
-func newFailingFakeResourceClient(err error) (*fakeResourceClient, error) {
+// nolint:deadcode,unused
+func newFailingFakeResourceClient(reterr error) (*fakeResourceClient, error) {
 	iterator, err := newFakeResourceSkusResultIterator(nil)
 	if err != nil {
 		return nil, err
@@ -58,7 +59,7 @@ func newFailingFakeResourceClient(err error) (*fakeResourceClient, error) {
 
 	return &fakeResourceClient{
 		res: iterator,
-		err: err,
+		err: reterr,
 	}, nil
 }
 
@@ -76,10 +77,7 @@ func newSuccessfulFakeResourceClient(skuLists [][]compute.ResourceSku) (*fakeRes
 
 func newFakeResourceSkusResultIterator(skuLists [][]compute.ResourceSku) (compute.ResourceSkusResultIterator, error) {
 	pages := newPageList(skuLists)
-	pageFn := func(ctx context.Context, result compute.ResourceSkusResult) (compute.ResourceSkusResult, error) {
-		return pages.next(ctx, result)
-	}
-	newPage := compute.NewResourceSkusResultPage(pageFn)
+	newPage := compute.NewResourceSkusResultPage(pages.next)
 	if err := newPage.NextWithContext(context.Background()); err != nil {
 		return compute.ResourceSkusResultIterator{}, err
 	}

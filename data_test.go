@@ -61,7 +61,6 @@ func Test_Data(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			cache, err := tc.newCacheFunc(ctx, resourceClient)
 			if err != nil {
 				t.Error(err)

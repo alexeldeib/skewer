@@ -36,7 +36,6 @@ func Test_WithLocation(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			if diff := cmp.Diff(tc.expect, NewStaticCache(nil, tc.options...)); diff != "" {
 				t.Error(diff)
 			}
@@ -60,11 +59,11 @@ func Test_Filter(t *testing.T) {
 		expected   []compute.ResourceSku
 	}{
 		"nil slice filters to nil slice": {
-			condition: func(SKU) bool { return true },
+			condition: func(*SKU) bool { return true },
 		},
 		"empty slice filters to empty slice": {
 			unfiltered: []compute.ResourceSku{},
-			condition:  func(SKU) bool { return true },
+			condition:  func(*SKU) bool { return true },
 			expected:   []compute.ResourceSku{},
 		},
 		"slice with non-matching element filters to empty slice": {
@@ -73,7 +72,7 @@ func Test_Filter(t *testing.T) {
 					ResourceType: to.StringPtr("nomatch"),
 				},
 			},
-			condition: func(s SKU) bool { return s.GetName() == "match" },
+			condition: func(s *SKU) bool { return s.GetName() == "match" },
 			expected:  []compute.ResourceSku{},
 		},
 		"slice with one matching element doesn't change": {
@@ -82,7 +81,7 @@ func Test_Filter(t *testing.T) {
 					ResourceType: to.StringPtr("match"),
 				},
 			},
-			condition: func(s SKU) bool { return true },
+			condition: func(s *SKU) bool { return true },
 			expected: []compute.ResourceSku{
 				{
 					ResourceType: to.StringPtr("match"),
@@ -107,7 +106,7 @@ func Test_Filter(t *testing.T) {
 					ResourceType: to.StringPtr("match"),
 				},
 			},
-			condition: func(s SKU) bool { return !IsResourceType(s, "match") },
+			condition: func(s *SKU) bool { return !IsResourceType(s, "match") },
 			expected: []compute.ResourceSku{
 				{
 					ResourceType: to.StringPtr("nomatch"),
@@ -121,7 +120,6 @@ func Test_Filter(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			result := Filter(wrapResourceSKUs(tc.unfiltered), tc.condition)
 			if diff := cmp.Diff(result, wrapResourceSKUs(tc.expected), []cmp.Option{
 				cmpopts.EquateEmpty(),
@@ -134,21 +132,21 @@ func Test_Filter(t *testing.T) {
 
 func Test_Map(t *testing.T) {
 	t.Run("nil slice maps to nil slice", func(t *testing.T) {
-		mapFn := func(SKU) SKU { return SKU{} }
+		mapFn := func(*SKU) SKU { return SKU{} }
 		if Map(nil, mapFn) != nil {
 			t.Error()
 		}
 	})
 
 	t.Run("empty slice maps to empty slice", func(t *testing.T) {
-		mapFn := func(SKU) SKU { return SKU{} }
+		mapFn := func(*SKU) SKU { return SKU{} }
 		if len(Map([]SKU{}, mapFn)) != 0 {
 			t.Error()
 		}
 	})
 
 	t.Run("identity function keeps slice the same", func(t *testing.T) {
-		mapFn := func(s SKU) SKU { return s }
+		mapFn := func(s *SKU) SKU { return *s }
 		skuList := make([]SKU, 100)
 		mapped := Map(skuList, mapFn)
 		if diff := cmp.Diff(mapped, skuList); diff != "" {
@@ -159,9 +157,9 @@ func Test_Map(t *testing.T) {
 	t.Run("map hits each element once", func(t *testing.T) {
 		counter := 0
 		skuList := make([]SKU, 100)
-		Map(skuList, func(s SKU) SKU {
+		Map(skuList, func(s *SKU) SKU {
 			counter++
-			return s
+			return SKU{}
 		})
 
 		if counter != 100 {
@@ -236,8 +234,6 @@ func Test_Cache_Get(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			cache := &Cache{
 				data: wrapResourceSKUs(tc.have),
 			}
@@ -266,12 +262,11 @@ func Test_Cache_Get(t *testing.T) {
 					t.Fatalf("expected kind to be %s, but was %s", tc.resourceType, *val.ResourceType)
 				}
 			}
-
 		})
 	}
 }
 
-func Test_Cache_GetAvailabilityZones(t *testing.T) {
+func Test_Cache_GetAvailabilityZones(t *testing.T) { //nolint:funlen
 	cases := map[string]struct {
 		have []compute.ResourceSku
 		want []string
@@ -398,8 +393,6 @@ func Test_Cache_GetAvailabilityZones(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			cache := NewStaticCache(wrapResourceSKUs(tc.have), WithLocation("baz"))
 
 			zones := cache.GetAvailabilityZones(context.Background())
@@ -415,7 +408,7 @@ func Test_Cache_GetAvailabilityZones(t *testing.T) {
 	}
 }
 
-func Test_Cache_GetVirtualMachineAvailabilityZonesForSize(t *testing.T) {
+func Test_Cache_GetVirtualMachineAvailabilityZonesForSize(t *testing.T) { //nolint:funlen
 	cases := map[string]struct {
 		have []compute.ResourceSku
 		want []string
@@ -547,7 +540,6 @@ func Test_Cache_GetVirtualMachineAvailabilityZonesForSize(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			cache := NewStaticCache(wrapResourceSKUs(tc.have), WithLocation("baz"))
 			zones := cache.GetVirtualMachineAvailabilityZonesForSize(context.Background(), "foo")
 			if diff := cmp.Diff(zones, tc.want, []cmp.Option{

@@ -75,8 +75,8 @@ func Test_SKU_HasCapability(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			if diff := cmp.Diff(tc.expect, SKU(tc.sku).HasCapability(tc.capability)); diff != "" {
+			sku := SKU(tc.sku)
+			if diff := cmp.Diff(tc.expect, sku.HasCapability(tc.capability)); diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -155,8 +155,8 @@ func Test_SKU_HasCapabilityWithCapacity(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			got, err := SKU(tc.sku).HasCapabilityWithCapacity(tc.capability, tc.capacity)
+			sku := SKU(tc.sku)
+			got, err := sku.HasCapabilityWithCapacity(tc.capability, tc.capacity)
 			if tc.err != nil {
 				if diff := cmp.Diff(tc.err.Error(), err.Error()); diff != "" {
 					t.Error(diff)
@@ -205,8 +205,8 @@ func Test_SKU_IsResourceType(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			if diff := cmp.Diff(tc.expect, IsResourceType(SKU(tc.sku), ResourceType(tc.resourceType))); diff != "" {
+			sku := SKU(tc.sku)
+			if diff := cmp.Diff(tc.expect, IsResourceType(&sku, ResourceType(tc.resourceType))); diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -239,8 +239,8 @@ func Test_SKU_GetName(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			if diff := cmp.Diff(tc.expect, SKU(tc.sku).GetName()); diff != "" {
+			sku := SKU(tc.sku)
+			if diff := cmp.Diff(tc.expect, sku.GetName()); diff != "" {
 				t.Error(diff)
 			}
 		})

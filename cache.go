@@ -115,11 +115,9 @@ func (c *Cache) List(ctx context.Context) []SKU {
 	return c.data
 }
 
-// GetVirtualMachines returns the list of all virtual machines skus in a given azure location.
+// GetVirtualMachines returns the list of all virtual machines *SKUs in a given azure location.
 func (c *Cache) GetVirtualMachines(ctx context.Context) []SKU {
-	return Filter(c.data, func(s SKU) bool {
-		return IsResourceType(s, VirtualMachines)
-	})
+	return Filter(c.data, ResourceTypeFilter(VirtualMachines))
 }
 
 // GetVirtualMachineAvailabilityZones returns all virtual machine zones available in a given location.
@@ -136,13 +134,13 @@ func (c *Cache) GetVirtualMachineAvailabilityZonesForSize(ctx context.Context, s
 func (c *Cache) GetAvailabilityZones(ctx context.Context, filters ...FilterFn) []string {
 	allZones := make(map[string]bool)
 
-	Map(c.data, func(s SKU) SKU {
+	Map(c.data, func(s *SKU) SKU {
 		if All(s, filters) {
 			for zone := range s.AvailabilityZones(c.location) {
 				allZones[zone] = true
 			}
 		}
-		return s
+		return SKU{}
 	})
 
 	result := make([]string, 0, len(allZones))
@@ -177,7 +175,7 @@ func (c *Cache) Equal(other *Cache) bool {
 }
 
 // All returns true if all of the values in the slice satisfy the predicate.
-func All(sku SKU, conditions []FilterFn) bool {
+func All(sku *SKU, conditions []FilterFn) bool {
 	for _, condition := range conditions {
 		if !condition(sku) {
 			return false
@@ -194,9 +192,9 @@ func Filter(skus []SKU, filterFn ...FilterFn) []SKU {
 	}
 
 	filtered := make([]SKU, 0)
-	for _, sku := range skus {
-		if All(sku, filterFn) {
-			filtered = append(filtered, sku)
+	for i := range skus {
+		if All(&skus[i], filterFn) {
+			filtered = append(filtered, skus[i])
 		}
 	}
 	return filtered
@@ -210,28 +208,28 @@ func Map(skus []SKU, fn MapFn) []SKU {
 	}
 
 	mapped := make([]SKU, 0, len(skus))
-	for _, sku := range skus {
-		mapped = append(mapped, fn(sku))
+	for i := range skus {
+		mapped = append(mapped, fn(&skus[i]))
 	}
 	return mapped
 }
 
 // FilterFn is a convenience type for filtering.
-type FilterFn func(SKU) bool
+type FilterFn func(*SKU) bool
 
 // ResourceTypeFilter produces a filter function for any resource type.
-func ResourceTypeFilter(resourceType ResourceType) func(SKU) bool {
-	return func(s SKU) bool {
+func ResourceTypeFilter(resourceType ResourceType) func(*SKU) bool {
+	return func(s *SKU) bool {
 		return IsResourceType(s, resourceType)
 	}
 }
 
 // NameFilter produces a filter function for the name of a resource sku.
-func NameFilter(name string) func(SKU) bool {
-	return func(s SKU) bool {
+func NameFilter(name string) func(*SKU) bool {
+	return func(s *SKU) bool {
 		return strings.EqualFold(s.GetName(), name)
 	}
 }
 
 // MapFn is a convenience type for mapping.
-type MapFn func(SKU) SKU
+type MapFn func(*SKU) SKU
