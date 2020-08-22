@@ -10,14 +10,164 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-func Test_Cache_List(t *testing.T)               {}
-func Test_Cache_GetVirtualMachines(t *testing.T) {}
+func Test_NewCache(t *testing.T) {
+	cases := map[string]struct{}{}
+	_ = cases
+}
 
-// func Test_Cache_GetAvailabilityZones(t *testing.T) {}
+func Test_WithLocation(t *testing.T) {
+	cases := map[string]struct {
+		options []CacheOption
+		expect  *Cache
+	}{
+		"should be empty with no options": {
+			expect: &Cache{},
+		},
+		"should have location and filter": {
+			options: []CacheOption{WithLocation("foo")},
+			expect: &Cache{
+				filter:   "location eq 'foo'",
+				location: "foo",
+			},
+		},
+	}
 
-func Test_Filter(t *testing.T) {}
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if diff := cmp.Diff(tc.expect, NewStaticCache(nil, tc.options...)); diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+}
 
-func Test_Map(t *testing.T) {}
+func Test_Cache_List(t *testing.T) {
+	cases := map[string]struct{}{}
+	_ = cases
+}
+func Test_Cache_GetVirtualMachines(t *testing.T) {
+	cases := map[string]struct{}{}
+	_ = cases
+}
+
+func Test_Filter(t *testing.T) {
+	cases := map[string]struct {
+		unfiltered []compute.ResourceSku
+		condition  FilterFn
+		expected   []compute.ResourceSku
+	}{
+		"nil slice filters to nil slice": {
+			condition: func(SKU) bool { return true },
+		},
+		"empty slice filters to empty slice": {
+			unfiltered: []compute.ResourceSku{},
+			condition:  func(SKU) bool { return true },
+			expected:   []compute.ResourceSku{},
+		},
+		"slice with non-matching element filters to empty slice": {
+			unfiltered: []compute.ResourceSku{
+				{
+					ResourceType: to.StringPtr("nomatch"),
+				},
+			},
+			condition: func(s SKU) bool { return s.GetName() == "match" },
+			expected:  []compute.ResourceSku{},
+		},
+		"slice with one matching element doesn't change": {
+			unfiltered: []compute.ResourceSku{
+				{
+					ResourceType: to.StringPtr("match"),
+				},
+			},
+			condition: func(s SKU) bool { return true },
+			expected: []compute.ResourceSku{
+				{
+					ResourceType: to.StringPtr("match"),
+				},
+			},
+		},
+		"all matching elements removed": {
+			unfiltered: []compute.ResourceSku{
+				{
+					ResourceType: to.StringPtr("match"),
+				},
+				{
+					ResourceType: to.StringPtr("nomatch"),
+				},
+				{
+					ResourceType: to.StringPtr("match"),
+				},
+				{
+					ResourceType: to.StringPtr("unmatch"),
+				},
+				{
+					ResourceType: to.StringPtr("match"),
+				},
+			},
+			condition: func(s SKU) bool { return !IsResourceType(s, "match") },
+			expected: []compute.ResourceSku{
+				{
+					ResourceType: to.StringPtr("nomatch"),
+				},
+				{
+					ResourceType: to.StringPtr("unmatch"),
+				},
+			},
+		},
+	}
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			result := Filter(wrapResourceSKUs(tc.unfiltered), tc.condition)
+			if diff := cmp.Diff(result, wrapResourceSKUs(tc.expected), []cmp.Option{
+				cmpopts.EquateEmpty(),
+			}...); diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+}
+
+func Test_Map(t *testing.T) {
+	t.Run("nil slice maps to nil slice", func(t *testing.T) {
+		mapFn := func(SKU) SKU { return SKU{} }
+		if Map(nil, mapFn) != nil {
+			t.Error()
+		}
+	})
+
+	t.Run("empty slice maps to empty slice", func(t *testing.T) {
+		mapFn := func(SKU) SKU { return SKU{} }
+		if len(Map([]SKU{}, mapFn)) != 0 {
+			t.Error()
+		}
+	})
+
+	t.Run("identity function keeps slice the same", func(t *testing.T) {
+		mapFn := func(s SKU) SKU { return s }
+		skuList := make([]SKU, 100)
+		mapped := Map(skuList, mapFn)
+		if diff := cmp.Diff(mapped, skuList); diff != "" {
+			t.Error(diff)
+		}
+	})
+
+	t.Run("map hits each element once", func(t *testing.T) {
+		counter := 0
+		skuList := make([]SKU, 100)
+		Map(skuList, func(s SKU) SKU {
+			counter++
+			return s
+		})
+
+		if counter != 100 {
+			t.Error()
+		}
+	})
+}
 
 func Test_Cache_Get(t *testing.T) {
 	cases := map[string]struct {
@@ -26,7 +176,22 @@ func Test_Cache_Get(t *testing.T) {
 		have         []compute.ResourceSku
 		found        bool
 	}{
-		"should find": {
+		"should return false with no data": {
+			sku:          "foo",
+			resourceType: "bar",
+		},
+		"should match when found at index=0": {
+			sku:          "foo",
+			resourceType: "bar",
+			have: []compute.ResourceSku{
+				{
+					Name:         to.StringPtr("foo"),
+					ResourceType: to.StringPtr("bar"),
+				},
+			},
+			found: true,
+		},
+		"should match when found at index=1": {
 			sku:          "foo",
 			resourceType: "bar",
 			have: []compute.ResourceSku{
@@ -41,7 +206,7 @@ func Test_Cache_Get(t *testing.T) {
 			},
 			found: true,
 		},
-		"should not find": {
+		"should return false when no match exists": {
 			sku:          "foo",
 			resourceType: "bar",
 			have: []compute.ResourceSku{
@@ -234,151 +399,149 @@ func Test_Cache_GetAvailabilityZones(t *testing.T) {
 	}
 }
 
-// func TestCacheGetZonesWithVMSize(t *testing.T) {
-// 	cases := map[string]struct {
-// 		have []compute.ResourceSku
-// 		want []string
-// 	}{
-// 		"should find 1 result": {
-// 			have: []compute.ResourceSku{
-// 				{
-// 					Name:         to.StringPtr("foo"),
-// 					ResourceType: to.StringPtr(string(VirtualMachines)),
-// 					Locations: &[]string{
-// 						"baz",
-// 					},
-// 					LocationInfo: &[]compute.ResourceSkuLocationInfo{
-// 						{
-// 							Location: to.StringPtr("baz"),
-// 							Zones:    &[]string{"1"},
-// 						},
-// 					},
-// 				},
-// 			},
-// 			want: []string{"1"},
-// 		},
-// 		"should find 2 results": {
-// 			have: []compute.ResourceSku{
-// 				{
-// 					Name:         to.StringPtr("foo"),
-// 					ResourceType: to.StringPtr(string(VirtualMachines)),
-// 					Locations: &[]string{
-// 						"baz",
-// 					},
-// 					LocationInfo: &[]compute.ResourceSkuLocationInfo{
-// 						{
-// 							Location: to.StringPtr("baz"),
-// 							Zones:    &[]string{"1", "2"},
-// 						},
-// 					},
-// 				},
-// 			},
-// 			want: []string{"1", "2"},
-// 		},
-// 		"should not find due to size mismatch": {
-// 			have: []compute.ResourceSku{
-// 				{
-// 					Name:         to.StringPtr("foobar"),
-// 					ResourceType: to.StringPtr(string(VirtualMachines)),
-// 					Locations: &[]string{
-// 						"baz",
-// 					},
-// 					LocationInfo: &[]compute.ResourceSkuLocationInfo{
-// 						{
-// 							Location: to.StringPtr("baz"),
-// 							Zones:    &[]string{"1"},
-// 						},
-// 					},
-// 				},
-// 			},
-// 			want: nil,
-// 		},
-// 		"should not find due to location mismatch": {
-// 			have: []compute.ResourceSku{
-// 				{
-// 					Name:         to.StringPtr("foo"),
-// 					ResourceType: to.StringPtr(string(VirtualMachines)),
-// 					Locations: &[]string{
-// 						"foobar",
-// 					},
-// 					LocationInfo: &[]compute.ResourceSkuLocationInfo{
-// 						{
-// 							Location: to.StringPtr("foobar"),
-// 							Zones:    &[]string{"1"},
-// 						},
-// 					},
-// 				},
-// 			},
-// 			want: nil,
-// 		},
-// 		"should not find due to location restriction": {
-// 			have: []compute.ResourceSku{
-// 				{
-// 					Name:         to.StringPtr("foo"),
-// 					ResourceType: to.StringPtr(string(VirtualMachines)),
-// 					Locations: &[]string{
-// 						"baz",
-// 					},
-// 					LocationInfo: &[]compute.ResourceSkuLocationInfo{
-// 						{
-// 							Location: to.StringPtr("baz"),
-// 							Zones:    &[]string{"1"},
-// 						},
-// 					},
-// 					Restrictions: &[]compute.ResourceSkuRestrictions{
-// 						{
-// 							Type:   compute.Location,
-// 							Values: &[]string{"baz"},
-// 						},
-// 					},
-// 				},
-// 			},
-// 			want: nil,
-// 		},
-// 		"should not find due to zone restriction": {
-// 			have: []compute.ResourceSku{
-// 				{
-// 					Name:         to.StringPtr("foo"),
-// 					ResourceType: to.StringPtr(string(VirtualMachines)),
-// 					Locations: &[]string{
-// 						"baz",
-// 					},
-// 					LocationInfo: &[]compute.ResourceSkuLocationInfo{
-// 						{
-// 							Location: to.StringPtr("baz"),
-// 							Zones:    &[]string{"1"},
-// 						},
-// 					},
-// 					Restrictions: &[]compute.ResourceSkuRestrictions{
-// 						{
-// 							Type: compute.Zone,
-// 							RestrictionInfo: &compute.ResourceSkuRestrictionInfo{
-// 								Zones: &[]string{"1"},
-// 							},
-// 						},
-// 					},
-// 				},
-// 			},
-// 			want: nil,
-// 		},
-// 	}
+func Test_Cache_GetVirtualMachineAvailabilityZonesForSize(t *testing.T) {
+	cases := map[string]struct {
+		have []compute.ResourceSku
+		want []string
+	}{
+		"should find 1 result": {
+			have: []compute.ResourceSku{
+				{
+					Name:         to.StringPtr("foo"),
+					ResourceType: to.StringPtr(string(VirtualMachines)),
+					Locations: &[]string{
+						"baz",
+					},
+					LocationInfo: &[]compute.ResourceSkuLocationInfo{
+						{
+							Location: to.StringPtr("baz"),
+							Zones:    &[]string{"1"},
+						},
+					},
+				},
+			},
+			want: []string{"1"},
+		},
+		"should find 2 results": {
+			have: []compute.ResourceSku{
+				{
+					Name:         to.StringPtr("foo"),
+					ResourceType: to.StringPtr(string(VirtualMachines)),
+					Locations: &[]string{
+						"baz",
+					},
+					LocationInfo: &[]compute.ResourceSkuLocationInfo{
+						{
+							Location: to.StringPtr("baz"),
+							Zones:    &[]string{"1", "2"},
+						},
+					},
+				},
+			},
+			want: []string{"1", "2"},
+		},
+		"should not find due to size mismatch": {
+			have: []compute.ResourceSku{
+				{
+					Name:         to.StringPtr("foobar"),
+					ResourceType: to.StringPtr(string(VirtualMachines)),
+					Locations: &[]string{
+						"baz",
+					},
+					LocationInfo: &[]compute.ResourceSkuLocationInfo{
+						{
+							Location: to.StringPtr("baz"),
+							Zones:    &[]string{"1"},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		"should not find due to location mismatch": {
+			have: []compute.ResourceSku{
+				{
+					Name:         to.StringPtr("foo"),
+					ResourceType: to.StringPtr(string(VirtualMachines)),
+					Locations: &[]string{
+						"foobar",
+					},
+					LocationInfo: &[]compute.ResourceSkuLocationInfo{
+						{
+							Location: to.StringPtr("foobar"),
+							Zones:    &[]string{"1"},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		"should not find due to location restriction": {
+			have: []compute.ResourceSku{
+				{
+					Name:         to.StringPtr("foo"),
+					ResourceType: to.StringPtr(string(VirtualMachines)),
+					Locations: &[]string{
+						"baz",
+					},
+					LocationInfo: &[]compute.ResourceSkuLocationInfo{
+						{
+							Location: to.StringPtr("baz"),
+							Zones:    &[]string{"1"},
+						},
+					},
+					Restrictions: &[]compute.ResourceSkuRestrictions{
+						{
+							Type:   compute.Location,
+							Values: &[]string{"baz"},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		"should not find due to zone restriction": {
+			have: []compute.ResourceSku{
+				{
+					Name:         to.StringPtr("foo"),
+					ResourceType: to.StringPtr(string(VirtualMachines)),
+					Locations: &[]string{
+						"baz",
+					},
+					LocationInfo: &[]compute.ResourceSkuLocationInfo{
+						{
+							Location: to.StringPtr("baz"),
+							Zones:    &[]string{"1"},
+						},
+					},
+					Restrictions: &[]compute.ResourceSkuRestrictions{
+						{
+							Type: compute.Zone,
+							RestrictionInfo: &compute.ResourceSkuRestrictionInfo{
+								Zones: &[]string{"1"},
+							},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+	}
 
-// 	for name, tc := range cases {
-// 		tc := tc
-// 		t.Run(name, func(t *testing.T) {
-// 			t.Parallel()
-
-// 			cache := &Cache{
-// 				data: tc.have,
-// 			}
-
-// 			zones, err := cache.GetZonesWithVMSize(context.Background(), "foo", "baz")
-// 			if err != nil {
-// 				t.Error(err)
-// 			}
-// 			if diff := cmp.Diff(zones, tc.want, []cmp.Option{cmpopts.EquateEmpty()}...); diff != "" {
-// 				t.Fatalf(diff)
-// 			}
-// 		})
-// 	}
-// }
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			cache := NewStaticCache(wrapResourceSKUs(tc.have), WithLocation("baz"))
+			zones := cache.GetVirtualMachineAvailabilityZonesForSize(context.Background(), "foo")
+			if diff := cmp.Diff(zones, tc.want, []cmp.Option{
+				cmpopts.EquateEmpty(),
+				cmpopts.SortSlices(func(a, b string) bool {
+					return a < b
+				}),
+			}...); diff != "" {
+				t.Fatalf(diff)
+			}
+		})
+	}
+}

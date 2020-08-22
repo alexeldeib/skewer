@@ -13,6 +13,29 @@ type Cache struct {
 	data     []SKU
 }
 
+// Equal compres two caches
+func (c *Cache) Equal(other *Cache) bool {
+	if c == nil && other != nil {
+		return false
+	}
+	if c != nil && other == nil {
+		return false
+	}
+	if c != nil && other != nil {
+		return c.location == other.location &&
+			c.filter == other.filter
+	}
+	if len(c.data) != len(other.data) {
+		return false
+	}
+	for i := range c.data {
+		if c.data[i] != other.data[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // CacheOption describes available options to customize the listing behavior of the cache.
 type CacheOption func(c *Cache)
 
@@ -144,6 +167,10 @@ func All(sku SKU, conditions []FilterFn) bool {
 // Filter returns a new slice containing all values in the slice that
 // satisfy the filterFn predicate.
 func Filter(skus []SKU, filterFn FilterFn) []SKU {
+	if skus == nil {
+		return nil
+	}
+
 	filtered := make([]SKU, 0)
 	for _, sku := range skus {
 		if filterFn(sku) {
@@ -156,9 +183,13 @@ func Filter(skus []SKU, filterFn FilterFn) []SKU {
 // Map returns a new slice containing the results of applying the
 // mapFn to each value in the original slice.
 func Map(skus []SKU, fn MapFn) []SKU {
-	mapped := make([]SKU, len(skus))
-	for i, sku := range skus {
-		mapped[i] = fn(sku)
+	if skus == nil {
+		return nil
+	}
+
+	mapped := make([]SKU, 0, len(skus))
+	for _, sku := range skus {
+		mapped = append(mapped, fn(sku))
 	}
 	return mapped
 }

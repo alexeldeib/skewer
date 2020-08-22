@@ -11,10 +11,6 @@ import (
 // SKU wraps the Azure compute SKUs with richer functionality
 type SKU compute.ResourceSku
 
-func wrapResourecSKU(sku compute.ResourceSku) SKU {
-	return SKU(sku)
-}
-
 func wrapResourceSKUs(in []compute.ResourceSku) []SKU {
 	out := make([]SKU, len(in))
 	for index, value := range in {
@@ -107,6 +103,16 @@ func IsResourceType(s SKU, t ResourceType) bool {
 	return s.ResourceType != nil && strings.EqualFold(*s.ResourceType, string(t))
 }
 
+// GetResourceType returns the name of this resource sku. It normalizes pointers
+// to the empty string for comparison purposes. For example,
+// "virtualMachines" for a virtual machine.
+func (s SKU) GetResourceType() string {
+	if s.ResourceType == nil {
+		return ""
+	}
+	return *s.ResourceType
+}
+
 // GetName returns the name of this resource sku. It normalizes pointers
 // to the empty string for comparison purposes. For example,
 // "Standard_D8s_v3" for a virtual machine.
@@ -115,6 +121,28 @@ func (s SKU) GetName() string {
 		return ""
 	}
 	return *s.Name
+}
+
+// GetLocation returns the first found location on this SKU resource.
+// Typically only one should be listed (multiple SKU results will be returned for multiple regions).
+// We fallback to locationInfo although this appears to be duplicate info.
+func (s SKU) GetLocation() string {
+	if s.Locations != nil {
+		for _, location := range *s.Locations {
+			return location
+		}
+	}
+
+	// TODO(ace): probably should remove
+	if s.LocationInfo != nil {
+		for _, locationInfo := range *s.LocationInfo {
+			if locationInfo.Location != nil {
+				return *locationInfo.Location
+			}
+		}
+	}
+
+	return ""
 }
 
 // AvailabilityZones returns the list of Availability Zones which have this resource SKU available and unrestricted.
@@ -149,4 +177,11 @@ func (s SKU) AvailabilityZones(location string) map[string]bool {
 	}
 
 	return nil
+}
+
+// Equal returns true when two skus have the same location, type, and name.
+func (s SKU) Equal(other SKU) bool {
+	return s.GetResourceType() == other.GetResourceType() &&
+		s.GetName() == other.GetName() &&
+		s.GetLocation() == other.GetLocation()
 }

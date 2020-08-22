@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ResourceClient is the required Azure client interface used to popualate skewer's data.
+// ResourceClient is the required Azure client interface used to populate skewer's data.
 type ResourceClient interface {
 	ListComplete(ctx context.Context, filter string) (compute.ResourceSkusResultIterator, error)
 }
