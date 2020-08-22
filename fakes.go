@@ -45,6 +45,13 @@ type fakeResourceClient struct {
 	err error
 }
 
+func (f *fakeResourceClient) ListComplete(ctx context.Context, filter string) (compute.ResourceSkusResultIterator, error) {
+	if f.err != nil {
+		return compute.ResourceSkusResultIterator{}, f.err
+	}
+	return f.res, nil
+}
+
 func newFailingFakeResourceClient(err error) *fakeResourceClient {
 	return &fakeResourceClient{
 		res: newFakeResourceSkusResultIterator(nil),
@@ -57,6 +64,14 @@ func newSuccessfulFakeResourceClient(skuLists [][]compute.ResourceSku) *fakeReso
 		res: newFakeResourceSkusResultIterator(skuLists),
 		err: nil,
 	}
+}
+
+func newFakeResourceSkusResultIterator(skuLists [][]compute.ResourceSku) compute.ResourceSkusResultIterator {
+	pages := newPageList(skuLists)
+	pageFn := func(ctx context.Context, result compute.ResourceSkusResult) (compute.ResourceSkusResult, error) {
+		return pages.next(ctx, result)
+	}
+	return compute.NewResourceSkusResultIterator(compute.NewResourceSkusResultPage(pageFn))
 }
 
 type pageList struct {
@@ -82,14 +97,6 @@ func (p *pageList) next(context.Context, compute.ResourceSkusResult) (compute.Re
 	return p.pages[p.cursor], nil
 }
 
-func newFakeResourceSkusResultIterator(skuLists [][]compute.ResourceSku) compute.ResourceSkusResultIterator {
-	pages := newPageList(skuLists)
-	pageFn := func(ctx context.Context, result compute.ResourceSkusResult) (compute.ResourceSkusResult, error) {
-		return pages.next(ctx, result)
-	}
-	return compute.NewResourceSkusResultIterator(compute.NewResourceSkusResultPage(pageFn))
-}
-
 // func newFakeResourceSkusResultPage(skus []compute.ResourceSku) compute.ResourceSkusResultPage {
 // 	return compute.NewResourceSkusResultPage(func(context.Context, compute.ResourceSkusResult) (compute.ResourceSkusResult, error) {
 // 		return compute.ResourceSkusResult{
@@ -105,10 +112,3 @@ func newFakeResourceSkusResultIterator(skuLists [][]compute.ResourceSku) compute
 // 		err: nil,
 // 	}
 // }
-
-func (f *fakeResourceClient) ListComplete(ctx context.Context, filter string) (compute.ResourceSkusResultIterator, error) {
-	if f.err != nil {
-		return compute.ResourceSkusResultIterator{}, f.err
-	}
-	return f.res, nil
-}
