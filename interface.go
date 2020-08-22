@@ -50,9 +50,8 @@ func newWrappedResourceProviderClient(client ResourceProviderClient) *wrappedRes
 	return &wrappedResourceProviderClient{client}
 }
 
-// List greedily traverses all returned sku pages
-func (w *wrappedResourceProviderClient) List(ctx context.Context, filter string) ([]compute.ResourceSku, error) {
-	return iterate(ctx, filter, w.client.List)
+func (w *wrappedResourceProviderClient) ListComplete(ctx context.Context, filter string) (compute.ResourceSkusResultIterator, error) {
+	return w.client.List(ctx, filter)
 }
 
 type iterFunc func(context.Context, string) (compute.ResourceSkusResultIterator, error)

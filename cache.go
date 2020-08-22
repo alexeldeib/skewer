@@ -54,8 +54,9 @@ func NewCache(ctx context.Context, client ResourceClient, opts ...CacheOption) (
 // accepted client interface matches the real Azure clients (it returns
 // a paginated iterator).
 func NewCacheWithResourceProviderClient(ctx context.Context, client ResourceProviderClient, opts ...CacheOption) (*Cache, error) {
+	resourceClient := newWrappedResourceProviderClient(client)
 	c := &Cache{
-		client: newWrappedResourceProviderClient(client),
+		client: newWrappedResourceClient(resourceClient),
 	}
 
 	for _, optionFn := range opts {
