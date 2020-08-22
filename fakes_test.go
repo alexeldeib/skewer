@@ -8,15 +8,13 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 )
 
+// dataWrapper is a convenience wrapper for deserializing json testdata
 type dataWrapper struct {
 	Value []compute.ResourceSku `json:"value,omitempty"`
 }
 
-type fakeClient struct {
-	skus []compute.ResourceSku
-	err  error
-}
-
+// newDataWrapper takes a path to a list of compute skus and parses them
+// to a dataWrapper for use in fake clients
 func newDataWrapper(path string) (*dataWrapper, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -31,6 +29,13 @@ func newDataWrapper(path string) (*dataWrapper, error) {
 	return wrapper, nil
 }
 
+// fakeClient is close to the simplest fake client implementation usable
+// by the cache. It does not use pagination like Azure clients.
+type fakeClient struct {
+	skus []compute.ResourceSku
+	err  error
+}
+
 func (f *fakeClient) List(ctx context.Context, filter string) ([]compute.ResourceSku, error) {
 	if f.err != nil {
 		return nil, f.err
@@ -38,6 +43,9 @@ func (f *fakeClient) List(ctx context.Context, filter string) ([]compute.Resourc
 	return f.skus, nil
 }
 
+// fakeResourceClient is a fake client for the real Azure types. It
+// returns a result iterator and can test against arbitrary sequences of
+// return pages, injecting failure.
 type fakeResourceClient struct {
 	res compute.ResourceSkusResultIterator
 	err error
@@ -51,18 +59,16 @@ func (f *fakeResourceClient) ListComplete(ctx context.Context, filter string) (c
 }
 
 // nolint:deadcode,unused
-func newFailingFakeResourceClient(reterr error) (*fakeResourceClient, error) {
-	iterator, err := newFakeResourceSkusResultIterator(nil)
-	if err != nil {
-		return nil, err
-	}
-
+func newFailingFakeResourceClient(reterr error) *fakeResourceClient {
 	return &fakeResourceClient{
-		res: iterator,
+		res: compute.ResourceSkusResultIterator{},
 		err: reterr,
-	}, nil
+	}
 }
 
+// newSuccessfulFakeResourceClient takes a list of sku lists and returns
+// a ResourceClient which iterates over all of them, mapping each sku
+// list to a page of values.
 func newSuccessfulFakeResourceClient(skuLists [][]compute.ResourceSku) (*fakeResourceClient, error) {
 	iterator, err := newFakeResourceSkusResultIterator(skuLists)
 	if err != nil {
@@ -75,6 +81,9 @@ func newSuccessfulFakeResourceClient(skuLists [][]compute.ResourceSku) (*fakeRes
 	}, nil
 }
 
+// newFakeResourceSkusResultIterator takes a list of sku lists and
+// returns an iterator over all items, mapping each sku
+// list to a page of values.
 func newFakeResourceSkusResultIterator(skuLists [][]compute.ResourceSku) (compute.ResourceSkusResultIterator, error) {
 	pages := newPageList(skuLists)
 	newPage := compute.NewResourceSkusResultPage(pages.next)
@@ -84,6 +93,7 @@ func newFakeResourceSkusResultIterator(skuLists [][]compute.ResourceSku) (comput
 	return compute.NewResourceSkusResultIterator(newPage), nil
 }
 
+// chunk divides a list into count pieces.
 func chunk(skus []compute.ResourceSku, count int) [][]compute.ResourceSku {
 	divided := [][]compute.ResourceSku{}
 	size := (len(skus) + count - 1) / count
@@ -99,6 +109,7 @@ func chunk(skus []compute.ResourceSku, count int) [][]compute.ResourceSku {
 	return divided
 }
 
+// pageList is a utility type to help construct ResourceSkusResultIterators.
 type pageList struct {
 	cursor int
 	pages  []compute.ResourceSkusResult
@@ -114,6 +125,7 @@ func newPageList(skuLists [][]compute.ResourceSku) *pageList {
 	return list
 }
 
+// next underpins ResourceSkusResultIterator's NextWithDone() method.
 func (p *pageList) next(context.Context, compute.ResourceSkusResult) (compute.ResourceSkusResult, error) {
 	if p.cursor >= len(p.pages) {
 		return compute.ResourceSkusResult{}, nil

@@ -36,7 +36,8 @@ jobs:
         popd
         rm -rf ${GITHUB_WORKSPACE}/tmp/gocov
         file ${GITHUB_WORKSPACE}/bin/gocov-xml
-    - run: |
+    - name: test and calculate coverage
+      run: |
         export PATH=$PATH:${GITHUB_WORKSPACE}/bin
         go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
         gocov convert coverage.out | gocov-xml > coverage.xml
