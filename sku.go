@@ -1,6 +1,7 @@
 package skewer
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -50,6 +51,69 @@ const (
 	// EncryptionAtHost identifies the capability for accelerated networking support.
 	EncryptionAtHost = "EncryptionAtHostSupported"
 )
+
+// ErrCapabilityNotFound will be returned when a capability could not be
+// found, even without a value.
+type ErrCapabilityNotFound struct {
+	capability string
+}
+
+func (e *ErrCapabilityNotFound) Error() string {
+	return e.capability + "CapabilityNotFound"
+}
+
+// ErrCapabilityValueNil will be returned when a capability was found by
+// name but the value was nil.
+type ErrCapabilityValueNil struct {
+	capability string
+}
+
+func (e *ErrCapabilityValueNil) Error() string {
+	return e.capability + "CapabilityValueNil"
+}
+
+// ErrCapabilityValueParse will be returned when a capability was found by
+// name but the value was nil.
+type ErrCapabilityValueParse struct {
+	capability string
+	value      string
+	err        error
+}
+
+func (e *ErrCapabilityValueParse) Error() string {
+	return fmt.Sprintf("%sCapabilityValueParse: failed to parse string '%s' as int64, error: '%s'", e.capability, e.value, e.err)
+}
+
+// vCPU returns the number of vCPUs this SKU supports.
+func (s *SKU) vCPU() (int64, error) {
+	return s.GetCapabilityQuantity(VCPUs)
+}
+
+// Memory returns the amount of memory this SKU supports.
+func (s *SKU) Memory() (int64, error) {
+	return s.GetCapabilityQuantity(MemoryGB)
+}
+
+// GetCapabilityQuantity retrieves and parses the value of a numeric
+// capability with the provided name. It errors if the capability is not
+// found, the value was nil, or the value could not be parsed as an integer.
+func (s *SKU) GetCapabilityQuantity(name string) (int64, error) {
+	if s.Capabilities != nil {
+		for _, capability := range *s.Capabilities {
+			if capability.Name != nil && *capability.Name == name {
+				if capability.Value != nil {
+					intVal, err := strconv.ParseInt(*capability.Value, 10, 64)
+					if err != nil {
+						return -1, &ErrCapabilityValueParse{name, *capability.Value, err}
+					}
+					return intVal, nil
+				}
+				return -1, &ErrCapabilityValueNil{name}
+			}
+		}
+	}
+	return -1, &ErrCapabilityNotFound{name}
+}
 
 // HasCapability return true for a capability which can be either
 // supported or not. Examples include "EphemeralOSDiskSupported",

@@ -78,6 +78,12 @@ func Test_Data(t *testing.T) {
 					if !found {
 						t.Errorf("expected to find virtual machine sku standard_d4s_v3")
 					}
+					if cpu, err := sku.vCPU(); cpu != 4 || err != nil {
+						t.Errorf("expected standard_d4s_v3 to have 4 vCPUs and parse successfully, got value '%d' and error '%s'", cpu, err)
+					}
+					if memory, err := sku.Memory(); memory != 16 || err != nil {
+						t.Errorf("expected standard_d4s_v3 to have 16GB of memory and parse successfully, got value '%d' and error '%s'", memory, err)
+					}
 					if !sku.HasCapability(EphemeralOSDisk) {
 						t.Errorf("expected standard_d4s_v3 to support ephemeral os")
 					}
@@ -101,6 +107,12 @@ func Test_Data(t *testing.T) {
 					sku, found := cache.Get(ctx, "Standard_D2_v2", VirtualMachines)
 					if !found {
 						t.Errorf("expected to find virtual machine sku standard_d2_v2")
+					}
+					if cpu, err := sku.vCPU(); cpu != 2 || err != nil {
+						t.Errorf("expected standard_d2_v2 to have 2 vCPUs and parse successfully, got value '%d' and error '%s'", cpu, err)
+					}
+					if memory, err := sku.Memory(); memory != 7 || err != nil {
+						t.Errorf("expected standard_d2_v2 to have 7GB of memory and parse successfully, got value '%d' and error '%s'", memory, err)
 					}
 					if sku.HasCapability(EphemeralOSDisk) {
 						t.Errorf("expected standard_d2_v2 not to support ephemeral os")
