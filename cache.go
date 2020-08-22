@@ -35,7 +35,27 @@ type NewCacheFunc func(ctx context.Context, client ResourceClient, opts ...Cache
 // a paginated iterator).
 func NewCache(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error) {
 	c := &Cache{
-		client: newWrappingClient(client),
+		client: newWrappedResourceClient(client),
+	}
+
+	for _, optionFn := range opts {
+		optionFn(c)
+	}
+
+	if err := c.refresh(ctx); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+// NewCacheWithResourceProviderClient instantiates a cache of resource sku data with a ResourceClient
+// client, optionally with additional filtering by location. The
+// accepted client interface matches the real Azure clients (it returns
+// a paginated iterator).
+func NewCacheWithResourceProviderClient(ctx context.Context, client ResourceProviderClient, opts ...CacheOption) (*Cache, error) {
+	c := &Cache{
+		client: newWrappedResourceProviderClient(client),
 	}
 
 	for _, optionFn := range opts {
