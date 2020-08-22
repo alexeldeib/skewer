@@ -2,10 +2,10 @@ on:
   push:
     branches:
     - master
-
 jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
+    - run: "go test -race -coverprofile=coverage.txt -covermode=atomic"
     - uses: codecov/codecov-action@v1
