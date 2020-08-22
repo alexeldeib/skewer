@@ -17,7 +17,7 @@ type fakeClient struct {
 	err  error
 }
 
-func newFakeClientFromPath(path string) (*fakeClient, error) {
+func newDataWrapper(path string) (*dataWrapper, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -28,9 +28,7 @@ func newFakeClientFromPath(path string) (*fakeClient, error) {
 		return nil, err
 	}
 
-	return &fakeClient{
-		skus: wrapper.Value,
-	}, nil
+	return wrapper, nil
 }
 
 func (f *fakeClient) List(ctx context.Context, filter string) ([]compute.ResourceSku, error) {
@@ -52,26 +50,55 @@ func (f *fakeResourceClient) ListComplete(ctx context.Context, filter string) (c
 	return f.res, nil
 }
 
-func newFailingFakeResourceClient(err error) *fakeResourceClient {
+func newFailingFakeResourceClient(err error) (*fakeResourceClient, error) {
+	iterator, err := newFakeResourceSkusResultIterator(nil)
+	if err != nil {
+		return nil, err
+	}
+
 	return &fakeResourceClient{
-		res: newFakeResourceSkusResultIterator(nil),
+		res: iterator,
 		err: err,
-	}
+	}, nil
 }
 
-func newSuccessfulFakeResourceClient(skuLists [][]compute.ResourceSku) *fakeResourceClient {
+func newSuccessfulFakeResourceClient(skuLists [][]compute.ResourceSku) (*fakeResourceClient, error) {
+	iterator, err := newFakeResourceSkusResultIterator(skuLists)
+	if err != nil {
+		return nil, err
+	}
+
 	return &fakeResourceClient{
-		res: newFakeResourceSkusResultIterator(skuLists),
+		res: iterator,
 		err: nil,
-	}
+	}, nil
 }
 
-func newFakeResourceSkusResultIterator(skuLists [][]compute.ResourceSku) compute.ResourceSkusResultIterator {
+func newFakeResourceSkusResultIterator(skuLists [][]compute.ResourceSku) (compute.ResourceSkusResultIterator, error) {
 	pages := newPageList(skuLists)
 	pageFn := func(ctx context.Context, result compute.ResourceSkusResult) (compute.ResourceSkusResult, error) {
 		return pages.next(ctx, result)
 	}
-	return compute.NewResourceSkusResultIterator(compute.NewResourceSkusResultPage(pageFn))
+	newPage := compute.NewResourceSkusResultPage(pageFn)
+	if err := newPage.NextWithContext(context.Background()); err != nil {
+		return compute.ResourceSkusResultIterator{}, err
+	}
+	return compute.NewResourceSkusResultIterator(newPage), nil
+}
+
+func chunk(skus []compute.ResourceSku, count int) [][]compute.ResourceSku {
+	divided := [][]compute.ResourceSku{}
+	size := (len(skus) + count - 1) / count
+	for i := 0; i < len(skus); i += size {
+		end := i + size
+
+		if end > len(skus) {
+			end = len(skus)
+		}
+
+		divided = append(divided, skus[i:end])
+	}
+	return divided
 }
 
 type pageList struct {
@@ -81,7 +108,7 @@ type pageList struct {
 
 func newPageList(skuLists [][]compute.ResourceSku) *pageList {
 	list := &pageList{}
-	for i := 0; i+1 < len(skuLists); i++ {
+	for i := 0; i < len(skuLists); i++ {
 		list.pages = append(list.pages, compute.ResourceSkusResult{
 			Value: &skuLists[i],
 		})
@@ -90,25 +117,10 @@ func newPageList(skuLists [][]compute.ResourceSku) *pageList {
 }
 
 func (p *pageList) next(context.Context, compute.ResourceSkusResult) (compute.ResourceSkusResult, error) {
-	p.cursor++
 	if p.cursor >= len(p.pages) {
 		return compute.ResourceSkusResult{}, nil
 	}
-	return p.pages[p.cursor], nil
+	old := p.cursor
+	p.cursor++
+	return p.pages[old], nil
 }
-
-// func newFakeResourceSkusResultPage(skus []compute.ResourceSku) compute.ResourceSkusResultPage {
-// 	return compute.NewResourceSkusResultPage(func(context.Context, compute.ResourceSkusResult) (compute.ResourceSkusResult, error) {
-// 		return compute.ResourceSkusResult{
-// 			Value: &skus,
-// 		}, nil
-// 	})
-// }
-//
-// func newSinglePageFake(skus []compute.ResourceSku) *fakeResourceClient {
-// 	page := newFakeResourceSkusResultPage(skus)
-// 	return &fakeResourceClient{
-// 		res: compute.NewResourceSkusResultIterator(page),
-// 		err: nil,
-// 	}
-// }

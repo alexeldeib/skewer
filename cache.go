@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/sanity-io/litter"
 )
 
 // Cache stores a list of known skus, possible fetched with a provided client
@@ -31,6 +33,8 @@ type NewCacheFunc func(ctx context.Context, client ResourceClient, opts ...Cache
 // NewCache instantiates a cache of resource sku data with a live
 // client, optionally with additional filtering by location.
 func NewCache(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error) {
+	litter.Config.HidePrivateFields = false
+	litter.Config.HidePrivateFields = true
 	c := &Cache{
 		client: newWrappingClient(client),
 	}
