@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// SKU wraps the Azure compute SKUs with richer functionality
+// SKU wraps an Azure compute SKU with richer functionality
 type SKU compute.ResourceSku
 
 func wrapResourceSKUs(in []compute.ResourceSku) []SKU {
@@ -19,14 +19,11 @@ func wrapResourceSKUs(in []compute.ResourceSku) []SKU {
 	return out
 }
 
-// ResourceType is an enum representing existing resources..
-type ResourceType string
-
 const (
 	// VirtualMachines is the .
-	VirtualMachines ResourceType = "virtualMachines"
+	VirtualMachines = "virtualMachines"
 	// Disks is a convenience constant to filter resource SKUs to only include disks.
-	Disks ResourceType = "disks"
+	Disks = "disks"
 )
 
 // Supported models an enum of possible boolean values for resource support in the Azure API.
@@ -120,8 +117,8 @@ func (s *SKU) HasCapabilityWithCapacity(name string, value int64) (bool, error) 
 // value as its resource type. This may be used to filter using values
 // such as "virtualMachines", "disks", "availabilitySets", "snapshots",
 // and "hostGroups/hosts".
-func IsResourceType(s *SKU, t ResourceType) bool {
-	return s.ResourceType != nil && strings.EqualFold(*s.ResourceType, string(t))
+func IsResourceType(s *SKU, t string) bool {
+	return s.ResourceType != nil && strings.EqualFold(*s.ResourceType, t)
 }
 
 // GetResourceType returns the name of this resource sku. It normalizes pointers

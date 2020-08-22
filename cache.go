@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Cache stores a list of known skus, possible fetched with a provided client
+// Cache stores a list of known skus, possibly fetched with a provided client
 type Cache struct {
 	location string
 	filter   string
@@ -14,10 +14,10 @@ type Cache struct {
 	data     []SKU
 }
 
-// CacheOption describes available options to customize the listing behavior of the cache.
+// CacheOption describes functional options to customize the listing behavior of the cache.
 type CacheOption func(c *Cache)
 
-// WithLocation is a function to optionally filter skus by location
+// WithLocation is a functional option to filter skus by location
 func WithLocation(location string) CacheOption {
 	return func(c *Cache) {
 		c.location = location
@@ -25,11 +25,14 @@ func WithLocation(location string) CacheOption {
 	}
 }
 
-// NewCacheFunc allows for mocking out the underlying client.
+// NewCacheFunc describes the live cache instantiation signature. Used
+// for testing.
 type NewCacheFunc func(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error)
 
-// NewCache instantiates a cache of resource sku data with a live
-// client, optionally with additional filtering by location.
+// NewCache instantiates a cache of resource sku data with a ResourceClient
+// client, optionally with additional filtering by location. The
+// accepted client interface matches the real Azure clients (it returns
+// a paginated iterator).
 func NewCache(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error) {
 	c := &Cache{
 		client: newWrappingClient(client),
@@ -68,7 +71,7 @@ func NewCacheWithWrappedClient(ctx context.Context, client client, opts ...Cache
 // NewStaticCacheFn returns a function that initializes a cache with data and no ability to refresh. Used for testing.
 func NewStaticCacheFn(data []SKU, opts ...CacheOption) NewCacheFunc {
 	return func(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error) {
-		return NewStaticCache(data), nil
+		return NewStaticCache(data, opts...), nil
 	}
 }
 
@@ -97,7 +100,7 @@ func (c *Cache) refresh(ctx context.Context) error {
 }
 
 // Get returns the first matching resource of a given name and type in a location.
-func (c *Cache) Get(ctx context.Context, name string, resourceType ResourceType) (SKU, bool) {
+func (c *Cache) Get(ctx context.Context, name, resourceType string) (SKU, bool) {
 	filtered := Filter(c.data, []FilterFn{
 		ResourceTypeFilter(resourceType),
 		NameFilter(name),
@@ -151,7 +154,7 @@ func (c *Cache) GetAvailabilityZones(ctx context.Context, filters ...FilterFn) [
 	return result
 }
 
-// Equal compares two caches
+// Equal compares two caches.
 func (c *Cache) Equal(other *Cache) bool {
 	if c == nil && other != nil {
 		return false
@@ -174,7 +177,7 @@ func (c *Cache) Equal(other *Cache) bool {
 	return true
 }
 
-// All returns true if all of the values in the slice satisfy the predicate.
+// All returns true if the provided sku meets all provided conditions.
 func All(sku *SKU, conditions []FilterFn) bool {
 	for _, condition := range conditions {
 		if !condition(sku) {
@@ -185,7 +188,7 @@ func All(sku *SKU, conditions []FilterFn) bool {
 }
 
 // Filter returns a new slice containing all values in the slice that
-// satisfy the filterFn predicate.
+// satisfy all filterFn predicates.
 func Filter(skus []SKU, filterFn ...FilterFn) []SKU {
 	if skus == nil {
 		return nil
@@ -197,6 +200,7 @@ func Filter(skus []SKU, filterFn ...FilterFn) []SKU {
 			filtered = append(filtered, skus[i])
 		}
 	}
+
 	return filtered
 }
 
@@ -211,6 +215,7 @@ func Map(skus []SKU, fn MapFn) []SKU {
 	for i := range skus {
 		mapped = append(mapped, fn(&skus[i]))
 	}
+
 	return mapped
 }
 
@@ -218,7 +223,7 @@ func Map(skus []SKU, fn MapFn) []SKU {
 type FilterFn func(*SKU) bool
 
 // ResourceTypeFilter produces a filter function for any resource type.
-func ResourceTypeFilter(resourceType ResourceType) func(*SKU) bool {
+func ResourceTypeFilter(resourceType string) func(*SKU) bool {
 	return func(s *SKU) bool {
 		return IsResourceType(s, resourceType)
 	}

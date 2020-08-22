@@ -171,7 +171,7 @@ func Test_Map(t *testing.T) {
 func Test_Cache_Get(t *testing.T) {
 	cases := map[string]struct {
 		sku          string
-		resourceType ResourceType
+		resourceType string
 		have         []compute.ResourceSku
 		found        bool
 	}{
@@ -258,7 +258,7 @@ func Test_Cache_Get(t *testing.T) {
 					t.Fatalf("expected name to be %s, but was nil", tc.sku)
 					return
 				}
-				if *val.ResourceType != string(tc.resourceType) {
+				if *val.ResourceType != tc.resourceType {
 					t.Fatalf("expected kind to be %s, but was %s", tc.resourceType, *val.ResourceType)
 				}
 			}

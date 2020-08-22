@@ -14,6 +14,7 @@ var (
 	expectedAvailabilityZones    = []string{"1", "2", "3"}
 )
 
+// nolint:gocyclo,funlen
 func Test_Data(t *testing.T) {
 	dataWrapper, err := newDataWrapper("./testdata/eastus.json")
 	if err != nil {
