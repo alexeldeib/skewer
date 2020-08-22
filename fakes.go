@@ -2,13 +2,35 @@ package skewer
 
 import (
 	"context"
+	"encoding/json"
+	"io/ioutil"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 )
 
+type dataWrapper struct {
+	Value []compute.ResourceSku `json:"value,omitempty"`
+}
+
 type fakeClient struct {
 	skus []compute.ResourceSku
 	err  error
+}
+
+func newFakeClientFromPath(path string) (*fakeClient, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	wrapper := new(dataWrapper)
+	if err := json.Unmarshal(data, wrapper); err != nil {
+		return nil, err
+	}
+
+	return &fakeClient{
+		skus: wrapper.Value,
+	}, nil
 }
 
 func (f *fakeClient) List(ctx context.Context, filter string) ([]compute.ResourceSku, error) {

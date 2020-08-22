@@ -48,6 +48,8 @@ const (
 	VCPUs = "vCPUs"
 	// MemoryGB identifies the capability for memory capacity.
 	MemoryGB = "MemoryGB"
+	// HyperVGenerations identifies the hyper-v generations this vm sku supports.
+	HyperVGenerations = "HyperVGenerations"
 )
 
 // HasCapability return true for a capability which can be either
@@ -59,6 +61,23 @@ func (s SKU) HasCapability(name string) bool {
 		for _, capability := range *s.Capabilities {
 			if capability.Name != nil && *capability.Name == name {
 				if capability.Value != nil && strings.EqualFold(*capability.Value, string(CapabilitySupported)) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// HasCapabilityWithSeparator return true for a capability which may be
+// exposed as a comma-separated list. We check that the list contains
+// the desired substring. An example is "HyperVGenerations" which may be
+// "V1,V2"
+func (s SKU) HasCapabilityWithSeparator(name string, value string) bool {
+	if s.Capabilities != nil {
+		for _, capability := range *s.Capabilities {
+			if capability.Name != nil && *capability.Name == name {
+				if capability.Value != nil && strings.Contains(*capability.Value, string(value)) {
 					return true
 				}
 			}
@@ -181,7 +200,7 @@ func (s SKU) AvailabilityZones(location string) map[string]bool {
 
 // Equal returns true when two skus have the same location, type, and name.
 func (s SKU) Equal(other SKU) bool {
-	return s.GetResourceType() == other.GetResourceType() &&
-		s.GetName() == other.GetName() &&
-		s.GetLocation() == other.GetLocation()
+	return strings.EqualFold(s.GetResourceType(), other.GetResourceType()) &&
+		strings.EqualFold(s.GetName(), other.GetName()) &&
+		strings.EqualFold(s.GetLocation(), other.GetLocation())
 }

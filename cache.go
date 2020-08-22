@@ -3,6 +3,7 @@ package skewer
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // Cache stores a list of known skus, possible fetched with a provided client
@@ -11,29 +12,6 @@ type Cache struct {
 	filter   string
 	client   client
 	data     []SKU
-}
-
-// Equal compres two caches
-func (c *Cache) Equal(other *Cache) bool {
-	if c == nil && other != nil {
-		return false
-	}
-	if c != nil && other == nil {
-		return false
-	}
-	if c != nil && other != nil {
-		return c.location == other.location &&
-			c.filter == other.filter
-	}
-	if len(c.data) != len(other.data) {
-		return false
-	}
-	for i := range c.data {
-		if c.data[i] != other.data[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // CacheOption describes available options to customize the listing behavior of the cache.
@@ -50,10 +28,30 @@ func WithLocation(location string) CacheOption {
 // NewCacheFunc allows for mocking out the underlying client.
 type NewCacheFunc func(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error)
 
-// NewCache instantiates a cache of resource sku data with a live client, optionally with additional filtering by location.
+// NewCache instantiates a cache of resource sku data with a live
+// client, optionally with additional filtering by location.
 func NewCache(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error) {
 	c := &Cache{
 		client: newWrappingClient(client),
+	}
+
+	for _, optionFn := range opts {
+		optionFn(c)
+	}
+
+	if err := c.refresh(ctx); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+// NewCacheWithWrappedClient instantiates a cache of resource sku data
+// with an easier to mock interface than the live azure client,
+// optionally with additional filtering by location.
+func NewCacheWithWrappedClient(ctx context.Context, client client, opts ...CacheOption) (*Cache, error) {
+	c := &Cache{
+		client: client,
 	}
 
 	for _, optionFn := range opts {
@@ -100,9 +98,10 @@ func (c *Cache) refresh(ctx context.Context) error {
 
 // Get returns the first matching resource of a given name and type in a location.
 func (c *Cache) Get(ctx context.Context, name string, resourceType ResourceType) (SKU, bool) {
-	filtered := Filter(c.data, func(s SKU) bool {
-		return IsResourceType(s, resourceType) && s.GetName() == name
-	})
+	filtered := Filter(c.data, []FilterFn{
+		ResourceTypeFilter(resourceType),
+		NameFilter(name),
+	}...)
 
 	if len(filtered) < 1 {
 		return SKU{}, false
@@ -154,6 +153,29 @@ func (c *Cache) GetAvailabilityZones(ctx context.Context, filters ...FilterFn) [
 	return result
 }
 
+// Equal compares two caches
+func (c *Cache) Equal(other *Cache) bool {
+	if c == nil && other != nil {
+		return false
+	}
+	if c != nil && other == nil {
+		return false
+	}
+	if c != nil && other != nil {
+		return c.location == other.location &&
+			c.filter == other.filter
+	}
+	if len(c.data) != len(other.data) {
+		return false
+	}
+	for i := range c.data {
+		if c.data[i] != other.data[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // All returns true if all of the values in the slice satisfy the predicate.
 func All(sku SKU, conditions []FilterFn) bool {
 	for _, condition := range conditions {
@@ -166,14 +188,14 @@ func All(sku SKU, conditions []FilterFn) bool {
 
 // Filter returns a new slice containing all values in the slice that
 // satisfy the filterFn predicate.
-func Filter(skus []SKU, filterFn FilterFn) []SKU {
+func Filter(skus []SKU, filterFn ...FilterFn) []SKU {
 	if skus == nil {
 		return nil
 	}
 
 	filtered := make([]SKU, 0)
 	for _, sku := range skus {
-		if filterFn(sku) {
+		if All(sku, filterFn) {
 			filtered = append(filtered, sku)
 		}
 	}
@@ -207,7 +229,7 @@ func ResourceTypeFilter(resourceType ResourceType) func(SKU) bool {
 // NameFilter produces a filter function for the name of a resource sku.
 func NameFilter(name string) func(SKU) bool {
 	return func(s SKU) bool {
-		return s.GetName() == name
+		return strings.EqualFold(s.GetName(), name)
 	}
 }
 

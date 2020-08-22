@@ -2,6 +2,7 @@ package skewer
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -206,6 +207,21 @@ func Test_Cache_Get(t *testing.T) {
 			},
 			found: true,
 		},
+		"should match regardless of sku capitalization": {
+			sku:          "foo",
+			resourceType: "bar",
+			have: []compute.ResourceSku{
+				{
+					Name:         to.StringPtr("other"),
+					ResourceType: to.StringPtr("baz"),
+				},
+				{
+					Name:         to.StringPtr("FoO"),
+					ResourceType: to.StringPtr("bar"),
+				},
+			},
+			found: true,
+		},
 		"should return false when no match exists": {
 			sku:          "foo",
 			resourceType: "bar",
@@ -239,7 +255,7 @@ func Test_Cache_Get(t *testing.T) {
 					t.Fatalf("expected name to be %s, but was nil", tc.sku)
 					return
 				}
-				if *val.Name != tc.sku {
+				if !strings.EqualFold(*val.Name, tc.sku) {
 					t.Fatalf("expected name to be %s, but was %s", tc.sku, *val.Name)
 				}
 				if val.ResourceType == nil {
