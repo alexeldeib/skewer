@@ -177,9 +177,9 @@ func (s *SKU) HasCapabilityWithCapacity(name string, value int64) (bool, error) 
 	return false, nil
 }
 
-// IsRestricted returns true when a location restriction exists for
-// this SKU.
-func (s *SKU) IsRestricted(location string) bool {
+// IsAvailable returns true when the requested location matches one on
+// the sku, and there are no total restrictions on the location.
+func (s *SKU) IsAvailable(location string) bool {
 	for _, locationInfo := range *s.LocationInfo {
 		if strings.EqualFold(*locationInfo.Location, location) {
 			if s.Restrictions != nil {
@@ -191,6 +191,25 @@ func (s *SKU) IsRestricted(location string) bool {
 				}
 			}
 			return true
+		}
+	}
+	return false
+}
+
+// IsRestricted returns true when a location restriction exists for
+// this SKU.
+func (s *SKU) IsRestricted(location string) bool {
+	for _, locationInfo := range *s.LocationInfo {
+		if strings.EqualFold(*locationInfo.Location, location) {
+			if s.Restrictions != nil {
+				for _, restriction := range *s.Restrictions {
+					// Can't deploy to any zones in this location. We're done.
+					if restriction.Type == compute.Location {
+						return true
+					}
+				}
+			}
+			return false
 		}
 	}
 	return false
