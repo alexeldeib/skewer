@@ -177,6 +177,25 @@ func (s *SKU) HasCapabilityWithCapacity(name string, value int64) (bool, error) 
 	return false, nil
 }
 
+// IsRestricted returns true when a location restriction exists for
+// this SKU.
+func (s *SKU) IsRestricted(location string) bool {
+	for _, locationInfo := range *s.LocationInfo {
+		if strings.EqualFold(*locationInfo.Location, location) {
+			if s.Restrictions != nil {
+				for _, restriction := range *s.Restrictions {
+					// Can't deploy to any zones in this location. We're done.
+					if restriction.Type == compute.Location {
+						return false
+					}
+				}
+			}
+			return true
+		}
+	}
+	return false
+}
+
 // IsResourceType returns true when the wrapped SKU has the provided
 // value as its resource type. This may be used to filter using values
 // such as "virtualMachines", "disks", "availabilitySets", "snapshots",
