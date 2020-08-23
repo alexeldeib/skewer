@@ -2,6 +2,7 @@ package skewer
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -37,6 +38,18 @@ func Test_Data(t *testing.T) {
 		t.Error(err)
 	}
 
+	resourceProviderClient, err := newSuccessfulFakeResourceProviderClient([][]compute.ResourceSku{
+		dataWrapper.Value,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	chunkedResourceProviderClient, err := newSuccessfulFakeResourceProviderClient(chunk(dataWrapper.Value, 10))
+	if err != nil {
+		t.Error(err)
+	}
+
 	ctx := context.Background()
 
 	cases := map[string]struct {
@@ -50,6 +63,16 @@ func Test_Data(t *testing.T) {
 		"chunkedResourceClient": {
 			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
 				return NewCache(ctx, chunkedResourceClient, WithLocation("eastus"))
+			},
+		},
+		"resourceProviderClient": {
+			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
+				return NewCacheWithResourceProviderClient(ctx, resourceProviderClient, WithLocation("eastus"))
+			},
+		},
+		"chunkedResourceProviderClient": {
+			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
+				return NewCacheWithResourceProviderClient(ctx, chunkedResourceProviderClient, WithLocation("eastus"))
 			},
 		},
 		"wrappedClient": {
@@ -74,6 +97,9 @@ func Test_Data(t *testing.T) {
 				})
 
 				t.Run("standard_d4s_v3", func(t *testing.T) {
+					errCapabilityValueNil := &ErrCapabilityValueParse{}
+					errCapabilityNotFound := &ErrCapabilityNotFound{}
+
 					sku, found := cache.Get(ctx, "standard_d4s_v3", VirtualMachines)
 					if !found {
 						t.Errorf("expected to find virtual machine sku standard_d4s_v3")
@@ -84,6 +110,12 @@ func Test_Data(t *testing.T) {
 					if memory, err := sku.Memory(); memory != 16 || err != nil {
 						t.Errorf("expected standard_d4s_v3 to have 16GB of memory and parse successfully, got value '%d' and error '%s'", memory, err)
 					}
+					if quantity, err := sku.GetCapabilityQuantity("ShouldNotBePresent"); quantity != -1 || !errors.As(err, &errCapabilityNotFound) {
+						t.Errorf("expected standard_d4s_v3 not to have a non-existant capability, got value '%d' and error '%s'", quantity, err)
+					}
+					if quantity, err := sku.GetCapabilityQuantity("PremiumIO"); quantity != -1 || !errors.As(err, &errCapabilityValueNil) {
+						t.Errorf("expected standard_d4s_v3 to fail parsing value for boolean premiumIO as int, got value '%d' and error '%s'", quantity, err)
+					}
 					if !sku.HasCapability(EphemeralOSDisk) {
 						t.Errorf("expected standard_d4s_v3 to support ephemeral os")
 					}
@@ -93,8 +125,23 @@ func Test_Data(t *testing.T) {
 					if !sku.HasCapability(EncryptionAtHost) {
 						t.Errorf("expected standard_d4s_v3 to support encryption at host")
 					}
+					if !sku.IsAvailable("eastus") {
+						t.Errorf("expected standard_d4s_v3 to be available in eastus")
+					}
+					if sku.IsRestricted("eastus") {
+						t.Errorf("expected standard_d4s_v3 to be unrestricted in eastus")
+					}
+					if sku.IsAvailable("westus2") {
+						t.Errorf("expected standard_d4s_v3 not to be available in westus2")
+					}
+					if sku.IsRestricted("westus2") {
+						t.Errorf("expected standard_d4s_v3 not to be restricted in westus2")
+					}
 					if isSupported, err := sku.HasCapabilityWithCapacity("MaxResourceVolumeMB", 32768); !isSupported || err != nil {
 						t.Errorf("expected standard_d4s_v3 to  fit 32GB temp disk, got '%t', error: %s", isSupported, err)
+					}
+					if isSupported, err := sku.HasCapabilityWithCapacity("MaxResourceVolumeMB", 32769); isSupported || err != nil {
+						t.Errorf("expected standard_d4s_v3 not to fit 32GB  +1 byte temp disk, got '%t', error: %s", isSupported, err)
 					}
 					hasV1 := !sku.HasCapabilityWithSeparator(HyperVGenerations, "V1")
 					hasV2 := !sku.HasCapabilityWithSeparator(HyperVGenerations, "V2")
@@ -104,6 +151,9 @@ func Test_Data(t *testing.T) {
 				})
 
 				t.Run("standard_d2_v2", func(t *testing.T) {
+					errCapabilityValueNil := &ErrCapabilityValueParse{}
+					errCapabilityNotFound := &ErrCapabilityNotFound{}
+
 					sku, found := cache.Get(ctx, "Standard_D2_v2", VirtualMachines)
 					if !found {
 						t.Errorf("expected to find virtual machine sku standard_d2_v2")
@@ -114,6 +164,16 @@ func Test_Data(t *testing.T) {
 					if memory, err := sku.Memory(); memory != 7 || err != nil {
 						t.Errorf("expected standard_d2_v2 to have 7GB of memory and parse successfully, got value '%d' and error '%s'", memory, err)
 					}
+					if quantity, err := sku.GetCapabilityQuantity("ShouldNotBePresent"); quantity != -1 ||
+						!errors.As(err, &errCapabilityNotFound) ||
+						err.Error() != "ShouldNotBePresentCapabilityNotFound" {
+						t.Errorf("expected standard_d2_v2 not to have a non-existant capability, got value '%d' and error '%s'", quantity, err)
+					}
+					if quantity, err := sku.GetCapabilityQuantity("PremiumIO"); quantity != -1 ||
+						!errors.As(err, &errCapabilityValueNil) ||
+						err.Error() != "PremiumIOCapabilityValueParse: failed to parse string 'False' as int64, error: 'strconv.ParseInt: parsing \"False\": invalid syntax'" {
+						t.Errorf("expected standard_d2_v2 to fail parsing value for boolean premiumIO as int, got value '%d' and error '%s'", quantity, err)
+					}
 					if sku.HasCapability(EphemeralOSDisk) {
 						t.Errorf("expected standard_d2_v2 not to support ephemeral os")
 					}
@@ -123,6 +183,18 @@ func Test_Data(t *testing.T) {
 					if sku.HasCapability(EncryptionAtHost) {
 						t.Errorf("expected standard_d2_v2 not to support encryption at host")
 					}
+					if !sku.IsAvailable("eastus") {
+						t.Errorf("expected standard_d2_v2 to be available in eastus")
+					}
+					if sku.IsRestricted("eastus") {
+						t.Errorf("expected standard_d2_v2 to be unrestricted in eastus")
+					}
+					if sku.IsAvailable("westus2") {
+						t.Errorf("expected standard_d2_v2 not to be available in westus2")
+					}
+					if sku.IsRestricted("westus2") {
+						t.Errorf("expected standard_d2_v2 not to be restricted in westus2")
+					}
 					if isSupported, err := sku.HasCapabilityWithCapacity("MemoryGB", 1000); isSupported || err != nil {
 						t.Errorf("expected standard_d2_v2 not to have 1000GB of memory, got '%t', error: %s", isSupported, err)
 					}
@@ -130,6 +202,25 @@ func Test_Data(t *testing.T) {
 					hasV2 := sku.HasCapabilityWithSeparator(HyperVGenerations, "V2")
 					if hasV1 || hasV2 {
 						t.Errorf("expected standard_d2_v2 to support hyper-v generation v1 but not v2, got v1: '%t' , v2: '%t'", hasV1, hasV2)
+					}
+				})
+
+				t.Run("standard_D13_v2_promo", func(t *testing.T) {
+					sku, found := cache.Get(ctx, "standard_D13_v2_promo", VirtualMachines)
+					if !found {
+						t.Errorf("expected to find virtual machine sku standard_D13_v2_promo")
+					}
+					if sku.IsAvailable("eastus") {
+						t.Errorf("expected standard_D13_v2_promo to be unavailable in eastus")
+					}
+					if !sku.IsRestricted("eastus") {
+						t.Errorf("expected standard_D13_v2_promo to be restricted in eastus")
+					}
+					if sku.IsAvailable("westus2") {
+						t.Errorf("expected standard_D13_v2_promo not to be available in westus2")
+					}
+					if sku.IsRestricted("westus2") {
+						t.Errorf("expected standard_D13_v2_promo not to be restricted in westus2")
 					}
 				})
 			})

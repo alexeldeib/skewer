@@ -2,6 +2,7 @@ default: tidy fmt lint test
 
 cover: tidy fmt
 	go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+	go tool cover -html=coverage.out -o coverage.html
 
 fmt:
 	gofmt -l -w -s .

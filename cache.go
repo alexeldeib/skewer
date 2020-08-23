@@ -89,12 +89,12 @@ func NewCacheWithWrappedClient(ctx context.Context, client client, opts ...Cache
 	return c, nil
 }
 
-// NewStaticCacheFn returns a function that initializes a cache with data and no ability to refresh. Used for testing.
-func NewStaticCacheFn(data []SKU, opts ...CacheOption) NewCacheFunc {
-	return func(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error) {
-		return NewStaticCache(data, opts...), nil
-	}
-}
+// // NewStaticCacheFn returns a function that initializes a cache with data and no ability to refresh. Used for testing.
+// func NewStaticCacheFn(data []SKU, opts ...CacheOption) NewCacheFunc {
+// 	return func(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error) {
+// 		return NewStaticCache(data, opts...), nil
+// 	}
+// }
 
 // NewStaticCache initializes a cache with data and no ability to refresh. Used for testing.
 func NewStaticCache(data []SKU, opts ...CacheOption) *Cache {

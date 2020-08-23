@@ -9,6 +9,75 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func Test_SKU_GetCapabilityQuantity(t *testing.T) {
+	cases := map[string]struct {
+		sku        compute.ResourceSku
+		capability string
+		expect     int64
+		err        string
+	}{
+		"empty capability list should return capability not found": {
+			sku:        compute.ResourceSku{},
+			capability: "",
+			err:        (&ErrCapabilityNotFound{""}).Error(),
+		},
+		"empty capability should not match sku with empty list of capabilities": {
+			sku: compute.ResourceSku{
+				Capabilities: &[]compute.ResourceSkuCapabilities{},
+			},
+			capability: "",
+			err:        (&ErrCapabilityNotFound{""}).Error(),
+		},
+		"empty capability should fail to parse when not integer": {
+			sku: compute.ResourceSku{
+				Capabilities: &[]compute.ResourceSkuCapabilities{
+					{
+						Name:  to.StringPtr(""),
+						Value: to.StringPtr("False"),
+					},
+				},
+			},
+			capability: "",
+			err:        "CapabilityValueParse: failed to parse string 'False' as int64, error: 'strconv.ParseInt: parsing \"False\": invalid syntax'",
+		},
+		"foo capability should return successfully with integer": {
+			sku: compute.ResourceSku{
+				Capabilities: &[]compute.ResourceSkuCapabilities{
+					{
+						Name:  to.StringPtr("foo"),
+						Value: to.StringPtr("100"),
+					},
+				},
+			},
+			capability: "foo",
+			expect:     100,
+		},
+	}
+
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			sku := SKU(tc.sku)
+			quantity, err := sku.GetCapabilityQuantity(tc.capability)
+			if tc.err != "" {
+				if err == nil {
+					t.Errorf("expected failure with error '%s' but did not occur", tc.err)
+				}
+				if diff := cmp.Diff(tc.err, err.Error()); diff != "" {
+					t.Error(diff)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected success but failure occurred with error '%s'", err)
+				}
+				if diff := cmp.Diff(tc.expect, quantity); diff != "" {
+					t.Error(diff)
+				}
+			}
+		})
+	}
+}
+
 func Test_SKU_HasCapability(t *testing.T) {
 	cases := map[string]struct {
 		sku        compute.ResourceSku
@@ -207,6 +276,59 @@ func Test_SKU_IsResourceType(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			sku := SKU(tc.sku)
 			if diff := cmp.Diff(tc.expect, sku.IsResourceType(tc.resourceType)); diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+}
+
+func Test_SKU_GetLocation(t *testing.T) {
+	cases := map[string]struct {
+		sku    compute.ResourceSku
+		expect string
+	}{
+		"nil locations should return empty string": {
+			sku:    compute.ResourceSku{},
+			expect: "",
+		},
+		"empty array of locations return empty string": {
+			sku: compute.ResourceSku{
+				Locations: &[]string{},
+			},
+			expect: "",
+		},
+		"single empty value should return empty string": {
+			sku: compute.ResourceSku{
+				Locations: &[]string{
+					"",
+				},
+			},
+			expect: "",
+		},
+		"populated location should return correctly": {
+			sku: compute.ResourceSku{
+				Locations: &[]string{
+					"foo",
+				},
+			},
+			expect: "foo",
+		},
+		"should return first with multiple choices (sku api prefers to prefer 1 ResourceSku per location, synthetic test scenario only)": {
+			sku: compute.ResourceSku{
+				Locations: &[]string{
+					"bar",
+					"foo",
+				},
+			},
+			expect: "bar",
+		},
+	}
+
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			sku := SKU(tc.sku)
+			if diff := cmp.Diff(tc.expect, sku.GetLocation()); diff != "" {
 				t.Error(diff)
 			}
 		})
