@@ -2,6 +2,7 @@ on:
   push:
     branches:
     - main
+
 jobs:
   coverage:
     runs-on: ubuntu-latest
@@ -42,5 +43,4 @@ jobs:
         go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
         go tool cover -html=coverage.out -o coverage.html
         # gocov convert coverage.out | gocov-xml > coverage.xml
-        rm coverage.out
     - uses: codecov/codecov-action@v1
