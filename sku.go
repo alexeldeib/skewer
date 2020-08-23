@@ -98,18 +98,19 @@ func (s *SKU) Memory() (int64, error) {
 // capability with the provided name. It errors if the capability is not
 // found, the value was nil, or the value could not be parsed as an integer.
 func (s *SKU) GetCapabilityQuantity(name string) (int64, error) {
-	if s.Capabilities != nil {
-		for _, capability := range *s.Capabilities {
-			if capability.Name != nil && *capability.Name == name {
-				if capability.Value != nil {
-					intVal, err := strconv.ParseInt(*capability.Value, 10, 64)
-					if err != nil {
-						return -1, &ErrCapabilityValueParse{name, *capability.Value, err}
-					}
-					return intVal, nil
+	if s.Capabilities == nil {
+		return -1, &ErrCapabilityNotFound{name}
+	}
+	for _, capability := range *s.Capabilities {
+		if capability.Name != nil && *capability.Name == name {
+			if capability.Value != nil {
+				intVal, err := strconv.ParseInt(*capability.Value, 10, 64)
+				if err != nil {
+					return -1, &ErrCapabilityValueParse{name, *capability.Value, err}
 				}
-				return -1, &ErrCapabilityValueNil{name}
+				return intVal, nil
 			}
+			return -1, &ErrCapabilityValueNil{name}
 		}
 	}
 	return -1, &ErrCapabilityNotFound{name}
@@ -120,12 +121,13 @@ func (s *SKU) GetCapabilityQuantity(name string) (int64, error) {
 // "UltraSSDAvavailable" "EncryptionAtHostSupported",
 // "AcceleratedNetworkingEnabled", and "RdmaEnabled"
 func (s *SKU) HasCapability(name string) bool {
-	if s.Capabilities != nil {
-		for _, capability := range *s.Capabilities {
-			if capability.Name != nil && *capability.Name == name {
-				if capability.Value != nil && strings.EqualFold(*capability.Value, string(CapabilitySupported)) {
-					return true
-				}
+	if s.Capabilities == nil {
+		return false
+	}
+	for _, capability := range *s.Capabilities {
+		if capability.Name != nil && *capability.Name == name {
+			if capability.Value != nil && strings.EqualFold(*capability.Value, string(CapabilitySupported)) {
+				return true
 			}
 		}
 	}
@@ -137,12 +139,13 @@ func (s *SKU) HasCapability(name string) bool {
 // the desired substring. An example is "HyperVGenerations" which may be
 // "V1,V2"
 func (s *SKU) HasCapabilityWithSeparator(name, value string) bool {
-	if s.Capabilities != nil {
-		for _, capability := range *s.Capabilities {
-			if capability.Name != nil && *capability.Name == name {
-				if capability.Value != nil && strings.Contains(*capability.Value, value) {
-					return true
-				}
+	if s.Capabilities == nil {
+		return false
+	}
+	for _, capability := range *s.Capabilities {
+		if capability.Name != nil && *capability.Name == name {
+			if capability.Value != nil && strings.Contains(*capability.Value, value) {
+				return true
 			}
 		}
 	}
@@ -158,20 +161,21 @@ func (s *SKU) HasCapabilityWithSeparator(name, value string) bool {
 // "CombinedTempDiskAndCachedWriteBytesPerSecond", "UncachedDiskIOPS",
 // and "UncachedDiskBytesPerSecond"
 func (s *SKU) HasCapabilityWithCapacity(name string, value int64) (bool, error) {
-	if s.Capabilities != nil {
-		for _, capability := range *s.Capabilities {
-			if capability.Name != nil && *capability.Name == name {
-				if capability.Value != nil {
-					intVal, err := strconv.ParseInt(*capability.Value, 10, 64)
-					if err != nil {
-						return false, errors.Wrapf(err, "failed to parse string '%s' as int64", *capability.Value)
-					}
-					if intVal >= value {
-						return true, nil
-					}
+	if s.Capabilities == nil {
+		return false, nil
+	}
+	for _, capability := range *s.Capabilities {
+		if capability.Name != nil && *capability.Name == name {
+			if capability.Value != nil {
+				intVal, err := strconv.ParseInt(*capability.Value, 10, 64)
+				if err != nil {
+					return false, errors.Wrapf(err, "failed to parse string '%s' as int64", *capability.Value)
 				}
-				return false, nil
+				if intVal >= value {
+					return true, nil
+				}
 			}
+			return false, nil
 		}
 	}
 	return false, nil
@@ -180,6 +184,9 @@ func (s *SKU) HasCapabilityWithCapacity(name string, value int64) (bool, error) 
 // IsAvailable returns true when the requested location matches one on
 // the sku, and there are no total restrictions on the location.
 func (s *SKU) IsAvailable(location string) bool {
+	if s.LocationInfo == nil {
+		return false
+	}
 	for _, locationInfo := range *s.LocationInfo {
 		if strings.EqualFold(*locationInfo.Location, location) {
 			if s.Restrictions != nil {
@@ -199,6 +206,9 @@ func (s *SKU) IsAvailable(location string) bool {
 // IsRestricted returns true when a location restriction exists for
 // this SKU.
 func (s *SKU) IsRestricted(location string) bool {
+	if s.LocationInfo == nil {
+		return false
+	}
 	for _, locationInfo := range *s.LocationInfo {
 		if strings.EqualFold(*locationInfo.Location, location) {
 			if s.Restrictions != nil {
