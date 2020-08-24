@@ -50,6 +50,9 @@ const (
 	HyperVGenerations = "HyperVGenerations"
 	// EncryptionAtHost identifies the capability for accelerated networking support.
 	EncryptionAtHost = "EncryptionAtHostSupported"
+	// UltraSSDAvailable identifies the capability for ultra ssd
+	// enablement.
+	UltraSSDAvailable = "UltraSSDAvailable"
 )
 
 // ErrCapabilityNotFound will be returned when a capability could not be
@@ -118,17 +121,52 @@ func (s *SKU) GetCapabilityQuantity(name string) (int64, error) {
 
 // HasCapability return true for a capability which can be either
 // supported or not. Examples include "EphemeralOSDiskSupported",
-// "UltraSSDAvavailable" "EncryptionAtHostSupported",
-// "AcceleratedNetworkingEnabled", and "RdmaEnabled"
+// "EncryptionAtHostSupported", "AcceleratedNetworkingEnabled", and
+// "RdmaEnabled"
 func (s *SKU) HasCapability(name string) bool {
 	if s.Capabilities == nil {
 		return false
 	}
 	for _, capability := range *s.Capabilities {
-		if capability.Name != nil && *capability.Name == name {
-			if capability.Value != nil && strings.EqualFold(*capability.Value, string(CapabilitySupported)) {
-				return true
+		if capability.Name != nil && strings.EqualFold(*capability.Name, name) {
+			return capability.Value != nil && strings.EqualFold(*capability.Value, string(CapabilitySupported))
+		}
+	}
+	return false
+}
+
+// HasZonalCapability return true for a capability which can be either
+// supported or not. Examples include "UltraSSDAvailable".
+// This function only checks that zone details suggest support: it will
+// return true for a whole location even when only one zone supports the
+// feature. Currently, the only real scenario that appears to use
+// zoneDetails is UltraSSDAvailable which always lists all regions as
+// available.
+// TODO(ace): update this function signature/behavior if necessary to
+// account for per-zone availability.
+func (s *SKU) HasZonalCapability(name, location string) bool {
+	if s.LocationInfo == nil {
+		return false
+	}
+	for _, locationInfo := range *s.LocationInfo {
+		if strings.EqualFold(*locationInfo.Location, location) {
+			if locationInfo.ZoneDetails == nil {
+				return false
 			}
+			for _, zoneDetails := range *locationInfo.ZoneDetails {
+				if zoneDetails.Capabilities == nil {
+					break
+				}
+				for _, capability := range *zoneDetails.Capabilities {
+					if capability.Name != nil && strings.EqualFold(*capability.Name, name) {
+						if capability.Value != nil && strings.EqualFold(*capability.Value, string(CapabilitySupported)) {
+							return true
+						}
+						break
+					}
+				}
+			}
+			return false
 		}
 	}
 	return false
@@ -143,10 +181,8 @@ func (s *SKU) HasCapabilityWithSeparator(name, value string) bool {
 		return false
 	}
 	for _, capability := range *s.Capabilities {
-		if capability.Name != nil && *capability.Name == name {
-			if capability.Value != nil && strings.Contains(*capability.Value, value) {
-				return true
-			}
+		if capability.Name != nil && strings.EqualFold(*capability.Name, name) {
+			return capability.Value != nil && strings.Contains(*capability.Value, value)
 		}
 	}
 	return false
@@ -165,7 +201,7 @@ func (s *SKU) HasCapabilityWithCapacity(name string, value int64) (bool, error) 
 		return false, nil
 	}
 	for _, capability := range *s.Capabilities {
-		if capability.Name != nil && *capability.Name == name {
+		if capability.Name != nil && strings.EqualFold(*capability.Name, name) {
 			if capability.Value != nil {
 				intVal, err := strconv.ParseInt(*capability.Value, 10, 64)
 				if err != nil {
