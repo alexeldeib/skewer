@@ -239,26 +239,32 @@ func Test_SKU_HasCapabilityWithCapacity(t *testing.T) {
 	}
 }
 
-func Test_SKU_GetResourceType(t *testing.T) {
+func Test_SKU_GetResourceTypeAndName(t *testing.T) {
 	cases := map[string]struct {
-		sku    compute.ResourceSku
-		expect string
+		sku                compute.ResourceSku
+		expectName         string
+		expectResourceType string
 	}{
 		"nil resourceType should return empty string": {
-			sku:    compute.ResourceSku{},
-			expect: "",
+			sku:                compute.ResourceSku{},
+			expectResourceType: "",
+			expectName:         "",
 		},
 		"empty resourceType should return empty string": {
 			sku: compute.ResourceSku{
+				Name:         to.StringPtr(""),
 				ResourceType: to.StringPtr(""),
 			},
-			expect: "",
+			expectResourceType: "",
+			expectName:         "",
 		},
 		"populated resourceType should return correctly": {
 			sku: compute.ResourceSku{
+				Name:         to.StringPtr("foo"),
 				ResourceType: to.StringPtr("foo"),
 			},
-			expect: "foo",
+			expectResourceType: "foo",
+			expectName:         "foo",
 		},
 	}
 
@@ -266,8 +272,11 @@ func Test_SKU_GetResourceType(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			sku := SKU(tc.sku)
-			if diff := cmp.Diff(tc.expect, sku.GetResourceType()); diff != "" {
-				t.Error(diff)
+			if diff := cmp.Diff(tc.expectName, sku.GetName()); diff != "" {
+				t.Errorf("mismatched name\n%s", diff)
+			}
+			if diff := cmp.Diff(tc.expectResourceType, sku.GetResourceType()); diff != "" {
+				t.Errorf("mismatched resourceType\n%s", diff)
 			}
 		})
 	}
@@ -363,40 +372,6 @@ func Test_SKU_GetLocation(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			sku := SKU(tc.sku)
 			if diff := cmp.Diff(tc.expect, sku.GetLocation()); diff != "" {
-				t.Error(diff)
-			}
-		})
-	}
-}
-
-func Test_SKU_GetName(t *testing.T) {
-	cases := map[string]struct {
-		sku    compute.ResourceSku
-		expect string
-	}{
-		"nil name should return empty string": {
-			sku:    compute.ResourceSku{},
-			expect: "",
-		},
-		"empty name should return empty string": {
-			sku: compute.ResourceSku{
-				Name: to.StringPtr(""),
-			},
-			expect: "",
-		},
-		"populated name should return correctly": {
-			sku: compute.ResourceSku{
-				Name: to.StringPtr("foo"),
-			},
-			expect: "foo",
-		},
-	}
-
-	for name, tc := range cases {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			sku := SKU(tc.sku)
-			if diff := cmp.Diff(tc.expect, sku.GetName()); diff != "" {
 				t.Error(diff)
 			}
 		})
