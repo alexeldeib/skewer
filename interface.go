@@ -15,7 +15,7 @@ type ResourceClient interface {
 // ResourceProviderClient is a convenience interface for uses cases
 // specific to Azure resource providers.
 type ResourceProviderClient interface {
-	List(ctx context.Context, filter string) (compute.ResourceSkusResultIterator, error)
+	List(ctx context.Context, filter string) (compute.ResourceSkusResultPage, error)
 }
 
 // client defines the internal interface required by the skewer Cache.
@@ -51,7 +51,11 @@ func newWrappedResourceProviderClient(client ResourceProviderClient) *wrappedRes
 }
 
 func (w *wrappedResourceProviderClient) ListComplete(ctx context.Context, filter string) (compute.ResourceSkusResultIterator, error) {
-	return w.client.List(ctx, filter)
+	page, err := w.client.List(ctx, filter)
+	if err != nil {
+		return compute.ResourceSkusResultIterator{}, nil
+	}
+	return compute.NewResourceSkusResultIterator(page), nil
 }
 
 type iterFunc func(context.Context, string) (compute.ResourceSkusResultIterator, error)
