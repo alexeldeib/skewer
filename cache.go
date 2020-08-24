@@ -26,6 +26,15 @@ func WithLocation(location string) CacheOption {
 	}
 }
 
+// ErrClientNil will be returned when a user attempts to create a cache
+// without a client and use it.
+type ErrClientNil struct {
+}
+
+func (e *ErrClientNil) Error() string {
+	return fmt.Sprintf("cache requires a client provided by functional options to refresh")
+}
+
 // ErrClientNotNil will be returned when a user attempts to set two
 // clients on the same cache.
 type ErrClientNotNil struct {
@@ -83,9 +92,9 @@ func NewLazyCacheCreator() *LazyCacheCreator {
 	return new(LazyCacheCreator)
 }
 
-// NewCache returns the wrapped cache or instantiates a new one,
+// GetCache returns the wrapped cache or instantiates a new one,
 // storing it before returning a reference to it.
-func (l *LazyCacheCreator) NewCache(ctx context.Context, opts ...CacheOption) (*Cache, error) {
+func (l *LazyCacheCreator) GetCache(ctx context.Context, opts ...CacheOption) (*Cache, error) {
 	if l.cache == nil {
 		cache, err := NewCache(ctx, opts...)
 		if err != nil {
@@ -111,6 +120,10 @@ func NewCache(ctx context.Context, opts ...CacheOption) (*Cache, error) {
 		if err := optionFn(c); err != nil {
 			return nil, err
 		}
+	}
+
+	if c.client == nil {
+		return nil, &ErrClientNil{}
 	}
 
 	if err := c.refresh(ctx); err != nil {
