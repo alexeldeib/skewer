@@ -242,20 +242,18 @@ func (s *SKU) IsAvailable(location string) bool {
 // IsRestricted returns true when a location restriction exists for
 // this SKU.
 func (s *SKU) IsRestricted(location string) bool {
-	if s.LocationInfo == nil {
+	if s.Restrictions == nil {
 		return false
 	}
-	for _, locationInfo := range *s.LocationInfo {
-		if strings.EqualFold(*locationInfo.Location, location) {
-			if s.Restrictions != nil {
-				for _, restriction := range *s.Restrictions {
-					// Can't deploy to any zones in this location. We're done.
-					if restriction.Type == compute.Location {
-						return true
-					}
-				}
+	for _, restriction := range *s.Restrictions {
+		if restriction.Values == nil {
+			continue
+		}
+		for _, candidate := range *restriction.Values {
+			// Can't deploy in this location. We're done.
+			if strings.EqualFold(candidate, location) && restriction.Type == compute.Location {
+				return true
 			}
-			return false
 		}
 	}
 	return false
