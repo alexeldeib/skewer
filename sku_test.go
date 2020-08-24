@@ -239,6 +239,40 @@ func Test_SKU_HasCapabilityWithCapacity(t *testing.T) {
 	}
 }
 
+func Test_SKU_GetResourceType(t *testing.T) {
+	cases := map[string]struct {
+		sku    compute.ResourceSku
+		expect string
+	}{
+		"nil resourceType should return empty string": {
+			sku:    compute.ResourceSku{},
+			expect: "",
+		},
+		"empty resourceType should return empty string": {
+			sku: compute.ResourceSku{
+				ResourceType: to.StringPtr(""),
+			},
+			expect: "",
+		},
+		"populated resourceType should return correctly": {
+			sku: compute.ResourceSku{
+				ResourceType: to.StringPtr("foo"),
+			},
+			expect: "foo",
+		},
+	}
+
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			sku := SKU(tc.sku)
+			if diff := cmp.Diff(tc.expect, sku.GetResourceType()); diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+}
+
 func Test_SKU_IsResourceType(t *testing.T) {
 	cases := map[string]struct {
 		sku          compute.ResourceSku
