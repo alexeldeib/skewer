@@ -1,4 +1,4 @@
-default: tidy fmt lint test
+default: tidy fmt lint cover
 
 cover: tidy fmt
 	go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
