@@ -38,7 +38,7 @@ func Test_SKU_GetCapabilityQuantity(t *testing.T) {
 				},
 			},
 			capability: "",
-			err:        "CapabilityValueParse: failed to parse string 'False' as int64, error: 'strconv.ParseInt: parsing \"False\": invalid syntax'",
+			err:        "CapabilityValueParse: failed to parse string 'False' as int64, error: 'strconv.ParseInt: parsing \"False\": invalid syntax'", // nolint:lll
 		},
 		"foo capability should return successfully with integer": {
 			sku: compute.ResourceSku{
