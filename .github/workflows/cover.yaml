@@ -1,11 +1,10 @@
 on:
   push:
     branches:
-    - main
+    - master
   pull_request:
     branches:
-    - main
-
+    - master
 jobs:
   coverage:
     runs-on: ubuntu-latest
@@ -44,6 +43,6 @@ jobs:
       run: |
         export PATH=$PATH:${GITHUB_WORKSPACE}/bin
         go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-        go tool cover -html=coverage.out -o coverage.html
-        # gocov convert coverage.out | gocov-xml > coverage.xml
+        gocov convert coverage.out | gocov-xml > coverage.xml
+        rm coverage.out
     - uses: codecov/codecov-action@v1
