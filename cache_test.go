@@ -36,7 +36,11 @@ func Test_WithLocation(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			if diff := cmp.Diff(tc.expect, NewStaticCache(nil, tc.options...)); diff != "" {
+			cache, err := NewStaticCache(nil, tc.options...)
+			if err != nil {
+				t.Error(err)
+			}
+			if diff := cmp.Diff(tc.expect, cache); diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -393,8 +397,10 @@ func Test_Cache_GetAvailabilityZones(t *testing.T) { //nolint:funlen
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			cache := NewStaticCache(wrapResourceSKUs(tc.have), WithLocation("baz"))
-
+			cache, err := NewStaticCache(wrapResourceSKUs(tc.have), WithLocation("baz"))
+			if err != nil {
+				t.Error(err)
+			}
 			zones := cache.GetAvailabilityZones(context.Background())
 			if diff := cmp.Diff(zones, tc.want, []cmp.Option{
 				cmpopts.EquateEmpty(),
@@ -540,7 +546,10 @@ func Test_Cache_GetVirtualMachineAvailabilityZonesForSize(t *testing.T) { //noli
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			cache := NewStaticCache(wrapResourceSKUs(tc.have), WithLocation("baz"))
+			cache, err := NewStaticCache(wrapResourceSKUs(tc.have), WithLocation("baz"))
+			if err != nil {
+				t.Error(err)
+			}
 			zones := cache.GetVirtualMachineAvailabilityZonesForSize(context.Background(), "foo")
 			if diff := cmp.Diff(zones, tc.want, []cmp.Option{
 				cmpopts.EquateEmpty(),

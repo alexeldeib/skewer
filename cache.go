@@ -15,31 +15,102 @@ type Cache struct {
 }
 
 // CacheOption describes functional options to customize the listing behavior of the cache.
-type CacheOption func(c *Cache)
+type CacheOption func(c *Cache) error
 
 // WithLocation is a functional option to filter skus by location
 func WithLocation(location string) CacheOption {
-	return func(c *Cache) {
+	return func(c *Cache) error {
 		c.location = location
 		c.filter = fmt.Sprintf("location eq '%s'", location)
+		return nil
 	}
+}
+
+// ErrClientNotNil will be returned when a user attempts to set two
+// clients on the same cache.
+type ErrClientNotNil struct {
+}
+
+func (e *ErrClientNotNil) Error() string {
+	return fmt.Sprintf("only provide one client option when instantiating a cache")
+}
+
+// WithClient is a functional option to use a cache
+// backed by a client meeting the skewer signature.
+func WithClient(client client) CacheOption {
+	return func(c *Cache) error {
+		if c.client != nil {
+			return &ErrClientNotNil{}
+		}
+		c.client = client
+		return nil
+	}
+}
+
+// WithResourceClient is a functional option to use a cache
+// backed by a ResourceClient.
+func WithResourceClient(client ResourceClient) CacheOption {
+	return func(c *Cache) error {
+		if c.client != nil {
+			return &ErrClientNotNil{}
+		}
+		c.client = newWrappedResourceClient(client)
+		return nil
+	}
+}
+
+// WithResourceProviderClient is a functional option to use a cache
+// backed by a ResourceProviderClient.
+func WithResourceProviderClient(client ResourceProviderClient) CacheOption {
+	return func(c *Cache) error {
+		if c.client != nil {
+			return &ErrClientNotNil{}
+		}
+		resourceClient := newWrappedResourceProviderClient(client)
+		c.client = newWrappedResourceClient(resourceClient)
+		return nil
+	}
+}
+
+// LazyCacheCreator is a convenience type for lazily instantiating
+// caches.
+type LazyCacheCreator struct {
+	cache *Cache
+}
+
+// NewLazyCacheCreator instantiates a lazy cache creator.
+func NewLazyCacheCreator() *LazyCacheCreator {
+	return new(LazyCacheCreator)
+}
+
+// NewCache returns the wrapped cache or instantiates a new one,
+// storing it before returning a reference to it.
+func (l *LazyCacheCreator) NewCache(ctx context.Context, opts ...CacheOption) (*Cache, error) {
+	if l.cache == nil {
+		cache, err := NewCache(ctx, opts...)
+		if err != nil {
+			return nil, err
+		}
+		l.cache = cache
+	}
+	return l.cache, nil
 }
 
 // NewCacheFunc describes the live cache instantiation signature. Used
 // for testing.
-type NewCacheFunc func(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error)
+type NewCacheFunc func(ctx context.Context, opts ...CacheOption) (*Cache, error)
 
 // NewCache instantiates a cache of resource sku data with a ResourceClient
 // client, optionally with additional filtering by location. The
 // accepted client interface matches the real Azure clients (it returns
 // a paginated iterator).
-func NewCache(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error) {
-	c := &Cache{
-		client: newWrappedResourceClient(client),
-	}
+func NewCache(ctx context.Context, opts ...CacheOption) (*Cache, error) {
+	c := &Cache{}
 
 	for _, optionFn := range opts {
-		optionFn(c)
+		if err := optionFn(c); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := c.refresh(ctx); err != nil {
@@ -48,65 +119,20 @@ func NewCache(ctx context.Context, client ResourceClient, opts ...CacheOption) (
 
 	return c, nil
 }
-
-// NewCacheWithResourceProviderClient instantiates a cache of resource sku data with a ResourceClient
-// client, optionally with additional filtering by location. The
-// accepted client interface matches the real Azure clients (it returns
-// a paginated iterator).
-func NewCacheWithResourceProviderClient(ctx context.Context, client ResourceProviderClient, opts ...CacheOption) (*Cache, error) {
-	resourceClient := newWrappedResourceProviderClient(client)
-	c := &Cache{
-		client: newWrappedResourceClient(resourceClient),
-	}
-
-	for _, optionFn := range opts {
-		optionFn(c)
-	}
-
-	if err := c.refresh(ctx); err != nil {
-		return nil, err
-	}
-
-	return c, nil
-}
-
-// NewCacheWithWrappedClient instantiates a cache of resource sku data
-// with an easier to mock interface than the live azure client,
-// optionally with additional filtering by location.
-func NewCacheWithWrappedClient(ctx context.Context, client client, opts ...CacheOption) (*Cache, error) {
-	c := &Cache{
-		client: client,
-	}
-
-	for _, optionFn := range opts {
-		optionFn(c)
-	}
-
-	if err := c.refresh(ctx); err != nil {
-		return nil, err
-	}
-
-	return c, nil
-}
-
-// // NewStaticCacheFn returns a function that initializes a cache with data and no ability to refresh. Used for testing.
-// func NewStaticCacheFn(data []SKU, opts ...CacheOption) NewCacheFunc {
-// 	return func(ctx context.Context, client ResourceClient, opts ...CacheOption) (*Cache, error) {
-// 		return NewStaticCache(data, opts...), nil
-// 	}
-// }
 
 // NewStaticCache initializes a cache with data and no ability to refresh. Used for testing.
-func NewStaticCache(data []SKU, opts ...CacheOption) *Cache {
+func NewStaticCache(data []SKU, opts ...CacheOption) (*Cache, error) {
 	c := &Cache{
 		data: data,
 	}
 
 	for _, optionFn := range opts {
-		optionFn(c)
+		if err := optionFn(c); err != nil {
+			return nil, err
+		}
 	}
 
-	return c
+	return c, nil
 }
 
 func (c *Cache) refresh(ctx context.Context) error {

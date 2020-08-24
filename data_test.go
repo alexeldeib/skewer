@@ -57,28 +57,33 @@ func Test_Data(t *testing.T) {
 		newCacheFunc NewCacheFunc
 	}{
 		"resourceClient": {
-			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
-				return NewCache(ctx, resourceClient, WithLocation("eastus"))
+			newCacheFunc: func(_ context.Context, _ ...CacheOption) (*Cache, error) {
+				return NewCache(ctx, WithResourceClient(resourceClient), WithLocation("eastus"))
 			},
 		},
 		"chunkedResourceClient": {
-			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
-				return NewCache(ctx, chunkedResourceClient, WithLocation("eastus"))
+			newCacheFunc: func(_ context.Context, _ ...CacheOption) (*Cache, error) {
+				return NewCache(ctx, WithResourceClient(chunkedResourceClient), WithLocation("eastus"))
 			},
 		},
 		"resourceProviderClient": {
-			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
-				return NewCacheWithResourceProviderClient(ctx, resourceProviderClient, WithLocation("eastus"))
+			newCacheFunc: func(_ context.Context, _ ...CacheOption) (*Cache, error) {
+				return NewCache(ctx, WithResourceProviderClient(resourceProviderClient), WithLocation("eastus"))
 			},
 		},
 		"chunkedResourceProviderClient": {
-			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
-				return NewCacheWithResourceProviderClient(ctx, chunkedResourceProviderClient, WithLocation("eastus"))
+			newCacheFunc: func(_ context.Context, _ ...CacheOption) (*Cache, error) {
+				return NewCache(ctx, WithResourceProviderClient(chunkedResourceProviderClient), WithLocation("eastus"))
 			},
 		},
 		"wrappedClient": {
-			newCacheFunc: func(_ context.Context, _ ResourceClient, _ ...CacheOption) (*Cache, error) {
-				return NewCacheWithWrappedClient(ctx, fakeClient, WithLocation("eastus"))
+			newCacheFunc: func(_ context.Context, _ ...CacheOption) (*Cache, error) {
+				return NewCache(ctx, WithClient(fakeClient), WithLocation("eastus"))
+			},
+		},
+		"lazyCacheCreator": {
+			newCacheFunc: func(_ context.Context, _ ...CacheOption) (*Cache, error) {
+				return NewLazyCacheCreator().NewCache(ctx, WithResourceClient(resourceClient), WithLocation("eastus"))
 			},
 		},
 	}
@@ -86,7 +91,7 @@ func Test_Data(t *testing.T) {
 	for name, tc := range cases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			cache, err := tc.newCacheFunc(ctx, resourceClient)
+			cache, err := tc.newCacheFunc(ctx)
 			if err != nil {
 				t.Error(err)
 			}
