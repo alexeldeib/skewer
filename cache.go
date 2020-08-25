@@ -174,8 +174,8 @@ func (c *Cache) Get(ctx context.Context, name, resourceType string) (SKU, bool) 
 }
 
 // List returns all resource types for this location.
-func (c *Cache) List(ctx context.Context) []SKU {
-	return c.data
+func (c *Cache) List(ctx context.Context, filters ...FilterFn) []SKU {
+	return Filter(c.data, filters...)
 }
 
 // GetVirtualMachines returns the list of all virtual machines *SKUs in a given azure location.
