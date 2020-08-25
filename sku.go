@@ -12,6 +12,8 @@ import (
 // SKU wraps an Azure compute SKU with richer functionality
 type SKU compute.ResourceSku
 
+// Wrap takes an array of compute resource skus and wraps them into an
+// array of our richer type.
 func Wrap(in []compute.ResourceSku) []SKU {
 	out := make([]SKU, len(in))
 	for index, value := range in {
