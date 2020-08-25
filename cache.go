@@ -32,7 +32,7 @@ type ErrClientNil struct {
 }
 
 func (e *ErrClientNil) Error() string {
-	return fmt.Sprintf("cache requires a client provided by functional options to refresh")
+	return "cache requires a client provided by functional options to refresh"
 }
 
 // ErrClientNotNil will be returned when a user attempts to set two
@@ -41,7 +41,7 @@ type ErrClientNotNil struct {
 }
 
 func (e *ErrClientNotNil) Error() string {
-	return fmt.Sprintf("only provide one client option when instantiating a cache")
+	return "only provide one client option when instantiating a cache"
 }
 
 // WithClient is a functional option to use a cache

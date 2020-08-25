@@ -83,7 +83,7 @@ func Test_Data(t *testing.T) {
 		},
 		"lazyCacheCreator": {
 			newCacheFunc: func(_ context.Context, _ ...CacheOption) (*Cache, error) {
-				return NewLazyCacheCreator().NewCache(ctx, WithResourceClient(resourceClient), WithLocation("eastus"))
+				return NewLazyCacheCreator().GetCache(ctx, WithResourceClient(resourceClient), WithLocation("eastus"))
 			},
 		},
 	}

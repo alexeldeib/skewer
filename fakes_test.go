@@ -86,13 +86,13 @@ func newSuccessfulFakeResourceClient(skuLists [][]compute.ResourceSku) (*fakeRes
 // return pages, injecting failure. This uses the resource provider
 // signature for testing purposes.
 type fakeResourceProviderClient struct {
-	res compute.ResourceSkusResultIterator
+	res compute.ResourceSkusResultPage
 	err error
 }
 
-func (f *fakeResourceProviderClient) List(ctx context.Context, filter string) (compute.ResourceSkusResultIterator, error) {
+func (f *fakeResourceProviderClient) List(ctx context.Context, filter string) (compute.ResourceSkusResultPage, error) {
 	if f.err != nil {
-		return compute.ResourceSkusResultIterator{}, f.err
+		return compute.ResourceSkusResultPage{}, f.err
 	}
 	return f.res, nil
 }
@@ -100,7 +100,7 @@ func (f *fakeResourceProviderClient) List(ctx context.Context, filter string) (c
 // nolint:deadcode,unused
 func newFailingFakeResourceProviderClient(reterr error) *fakeResourceProviderClient {
 	return &fakeResourceProviderClient{
-		res: compute.ResourceSkusResultIterator{},
+		res: compute.ResourceSkusResultPage{},
 		err: reterr,
 	}
 }
@@ -109,15 +109,27 @@ func newFailingFakeResourceProviderClient(reterr error) *fakeResourceProviderCli
 // a ResourceProviderClient which iterates over all of them, mapping each sku
 // list to a page of values.
 func newSuccessfulFakeResourceProviderClient(skuLists [][]compute.ResourceSku) (*fakeResourceProviderClient, error) {
-	iterator, err := newFakeResourceSkusResultIterator(skuLists)
+	page, err := newFakeResourceSkusResultPage(skuLists)
 	if err != nil {
 		return nil, err
 	}
 
 	return &fakeResourceProviderClient{
-		res: iterator,
+		res: page,
 		err: nil,
 	}, nil
+}
+
+// newFakeResourceSkusResultPage takes a list of sku lists and
+// returns an iterator over all items, mapping each sku
+// list to a page of values.
+func newFakeResourceSkusResultPage(skuLists [][]compute.ResourceSku) (compute.ResourceSkusResultPage, error) {
+	pages := newPageList(skuLists)
+	newPage := compute.NewResourceSkusResultPage(pages.next)
+	if err := newPage.NextWithContext(context.Background()); err != nil {
+		return compute.ResourceSkusResultPage{}, err
+	}
+	return newPage, nil
 }
 
 // newFakeResourceSkusResultIterator takes a list of sku lists and
