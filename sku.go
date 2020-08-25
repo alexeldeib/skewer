@@ -12,7 +12,7 @@ import (
 // SKU wraps an Azure compute SKU with richer functionality
 type SKU compute.ResourceSku
 
-func wrapResourceSKUs(in []compute.ResourceSku) []SKU {
+func Wrap(in []compute.ResourceSku) []SKU {
 	out := make([]SKU, len(in))
 	for index, value := range in {
 		out[index] = SKU(value)

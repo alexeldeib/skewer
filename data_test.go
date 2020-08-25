@@ -120,7 +120,7 @@ func Test_Data(t *testing.T) {
 						t.Errorf("expected standard_d4s_v3 to have 4 vCPUs and parse successfully, got value '%d' and error '%s'", cpu, err)
 					}
 					if memory, err := sku.Memory(); memory != 16 || err != nil {
-						t.Errorf("expected standard_d4s_v3 to have 16GB of memory and parse successfully, got value '%d' and error '%s'", memory, err)
+						t.Errorf("expected standard_d4s_v3 to have 16GB of memory and parse successfully, got value '%f' and error '%s'", memory, err)
 					}
 					if quantity, err := sku.GetCapabilityIntegerQuantity("ShouldNotBePresent"); quantity != -1 || !errors.As(err, &errCapabilityNotFound) {
 						t.Errorf("expected standard_d4s_v3 not to have a non-existent capability, got value '%d' and error '%s'", quantity, err)
@@ -186,7 +186,7 @@ func Test_Data(t *testing.T) {
 						t.Errorf("expected standard_d2_v2 to have 2 vCPUs and parse successfully, got value '%d' and error '%s'", cpu, err)
 					}
 					if memory, err := sku.Memory(); memory != 7 || err != nil {
-						t.Errorf("expected standard_d2_v2 to have 7GB of memory and parse successfully, got value '%d' and error '%s'", memory, err)
+						t.Errorf("expected standard_d2_v2 to have 7GB of memory and parse successfully, got value '%f' and error '%s'", memory, err)
 					}
 					if quantity, err := sku.GetCapabilityIntegerQuantity("ShouldNotBePresent"); quantity != -1 ||
 						!errors.As(err, &errCapabilityNotFound) ||

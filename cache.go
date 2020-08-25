@@ -154,7 +154,7 @@ func (c *Cache) refresh(ctx context.Context) error {
 		return err
 	}
 
-	c.data = wrapResourceSKUs(data)
+	c.data = Wrap(data)
 
 	return nil
 }
