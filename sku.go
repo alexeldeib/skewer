@@ -90,8 +90,8 @@ func (e *ErrCapabilityValueParse) Error() string {
 	return fmt.Sprintf("%sCapabilityValueParse: failed to parse string '%s' as int64, error: '%s'", e.capability, e.value, e.err)
 }
 
-// vCPU returns the number of vCPUs this SKU supports.
-func (s *SKU) vCPU() (int64, error) {
+// VCPU returns the number of vCPUs this SKU supports.
+func (s *SKU) VCPU() (int64, error) {
 	return s.GetCapabilityQuantity(VCPUs)
 }
 

@@ -116,7 +116,7 @@ func Test_Data(t *testing.T) {
 					if resourceType := sku.GetResourceType(); resourceType != VirtualMachines {
 						t.Errorf("expected standard_d4s_v3 to have resourceType virtual machine, got: '%s'", resourceType)
 					}
-					if cpu, err := sku.vCPU(); cpu != 4 || err != nil {
+					if cpu, err := sku.VCPU(); cpu != 4 || err != nil {
 						t.Errorf("expected standard_d4s_v3 to have 4 vCPUs and parse successfully, got value '%d' and error '%s'", cpu, err)
 					}
 					if memory, err := sku.Memory(); memory != 16 || err != nil {
@@ -182,7 +182,7 @@ func Test_Data(t *testing.T) {
 					if resourceType := sku.GetResourceType(); resourceType != VirtualMachines {
 						t.Errorf("expected standard_d2_v2 to have resourceType virtual machine, got: '%s'", resourceType)
 					}
-					if cpu, err := sku.vCPU(); cpu != 2 || err != nil {
+					if cpu, err := sku.VCPU(); cpu != 2 || err != nil {
 						t.Errorf("expected standard_d2_v2 to have 2 vCPUs and parse successfully, got value '%d' and error '%s'", cpu, err)
 					}
 					if memory, err := sku.Memory(); memory != 7 || err != nil {
