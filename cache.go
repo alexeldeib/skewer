@@ -81,30 +81,6 @@ func WithResourceProviderClient(client ResourceProviderClient) CacheOption {
 	}
 }
 
-// LazyCacheCreator is a convenience type for lazily instantiating
-// caches.
-type LazyCacheCreator struct {
-	cache *Cache
-}
-
-// NewLazyCacheCreator instantiates a lazy cache creator.
-func NewLazyCacheCreator() *LazyCacheCreator {
-	return new(LazyCacheCreator)
-}
-
-// GetCache returns the wrapped cache or instantiates a new one,
-// storing it before returning a reference to it.
-func (l *LazyCacheCreator) GetCache(ctx context.Context, opts ...CacheOption) (*Cache, error) {
-	if l.cache == nil {
-		cache, err := NewCache(ctx, opts...)
-		if err != nil {
-			return nil, err
-		}
-		l.cache = cache
-	}
-	return l.cache, nil
-}
-
 // NewCacheFunc describes the live cache instantiation signature. Used
 // for testing.
 type NewCacheFunc func(ctx context.Context, opts ...CacheOption) (*Cache, error)
