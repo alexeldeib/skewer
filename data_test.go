@@ -81,11 +81,6 @@ func Test_Data(t *testing.T) {
 				return NewCache(ctx, WithClient(fakeClient), WithLocation("eastus"))
 			},
 		},
-		"lazyCacheCreator": {
-			newCacheFunc: func(_ context.Context, _ ...CacheOption) (*Cache, error) {
-				return NewLazyCacheCreator().GetCache(ctx, WithResourceClient(resourceClient), WithLocation("eastus"))
-			},
-		},
 	}
 
 	for name, tc := range cases {
