@@ -92,16 +92,16 @@ func (e *ErrCapabilityValueParse) Error() string {
 
 // VCPU returns the number of vCPUs this SKU supports.
 func (s *SKU) VCPU() (int64, error) {
-	return s.GetCapabilityQuantity(VCPUs)
+	return s.GetCapabilityIntegerQuantity(VCPUs)
 }
 
 // Memory returns the amount of memory this SKU supports.
-func (s *SKU) Memory() (int64, error) {
-	return s.GetCapabilityQuantity(MemoryGB)
+func (s *SKU) Memory() (float64, error) {
+	return s.GetCapabilityFloatQuantity(MemoryGB)
 }
 
 func (s *SKU) MaxCachedDiskBytes() (int64, error) {
-	return s.GetCapabilityQuantity(CachedDiskBytes)
+	return s.GetCapabilityIntegerQuantity(CachedDiskBytes)
 }
 
 func (s *SKU) IsEncryptionAtHostSupported() bool {
@@ -116,10 +116,11 @@ func (s *SKU) IsEphemeralOSDiskSupported() bool {
 	return s.HasCapability(EphemeralOSDisk)
 }
 
-// GetCapabilityQuantity retrieves and parses the value of a numeric
-// capability with the provided name. It errors if the capability is not
-// found, the value was nil, or the value could not be parsed as an integer.
-func (s *SKU) GetCapabilityQuantity(name string) (int64, error) {
+// GetCapabilityIntegerQuantity retrieves and parses the value of an
+// integer numeric capability with the provided name. It errors if the
+// capability is not found, the value was nil, or the value could not be
+// parsed as an integer.
+func (s *SKU) GetCapabilityIntegerQuantity(name string) (int64, error) {
 	if s.Capabilities == nil {
 		return -1, &ErrCapabilityNotFound{name}
 	}
@@ -127,6 +128,29 @@ func (s *SKU) GetCapabilityQuantity(name string) (int64, error) {
 		if capability.Name != nil && *capability.Name == name {
 			if capability.Value != nil {
 				intVal, err := strconv.ParseInt(*capability.Value, 10, 64)
+				if err != nil {
+					return -1, &ErrCapabilityValueParse{name, *capability.Value, err}
+				}
+				return intVal, nil
+			}
+			return -1, &ErrCapabilityValueNil{name}
+		}
+	}
+	return -1, &ErrCapabilityNotFound{name}
+}
+
+// GetCapabilityFloatQuantity retrieves and parses the value of a
+// floating point numeric capability with the provided name. It errors
+// if the capability is not found, the value was nil, or the value could
+// not be parsed as an integer.
+func (s *SKU) GetCapabilityFloatQuantity(name string) (float64, error) {
+	if s.Capabilities == nil {
+		return -1, &ErrCapabilityNotFound{name}
+	}
+	for _, capability := range *s.Capabilities {
+		if capability.Name != nil && *capability.Name == name {
+			if capability.Value != nil {
+				intVal, err := strconv.ParseFloat(*capability.Value, 64)
 				if err != nil {
 					return -1, &ErrCapabilityValueParse{name, *capability.Value, err}
 				}
