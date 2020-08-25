@@ -128,11 +128,11 @@ func Test_Data(t *testing.T) {
 					if quantity, err := sku.GetCapabilityQuantity("PremiumIO"); quantity != -1 || !errors.As(err, &errCapabilityValueNil) {
 						t.Errorf("expected standard_d4s_v3 to fail parsing value for boolean premiumIO as int, got value '%d' and error '%s'", quantity, err)
 					}
-					if !sku.HasZonalCapability(UltraSSDAvailable, "eastus") {
+					if !sku.HasZonalCapability(UltraSSDAvailable) {
 						t.Errorf("expected standard_d4s_v3 to support ultra ssd")
 					}
-					if sku.HasZonalCapability(UltraSSDAvailable, "westus2") {
-						t.Errorf("expected standard_d4s_v3 not to support ultra ssd in wrong region")
+					if sku.HasZonalCapability("NotExistingCapability") {
+						t.Errorf("expected standard_d4s_v3 not to support non-existent capability")
 					}
 					if !sku.HasCapability(EphemeralOSDisk) {
 						t.Errorf("expected standard_d4s_v3 to support ephemeral os")
@@ -198,11 +198,11 @@ func Test_Data(t *testing.T) {
 						err.Error() != "PremiumIOCapabilityValueParse: failed to parse string 'False' as int64, error: 'strconv.ParseInt: parsing \"False\": invalid syntax'" { // nolint:lll
 						t.Errorf("expected standard_d2_v2 to fail parsing value for boolean premiumIO as int, got value '%d' and error '%s'", quantity, err)
 					}
-					if sku.HasZonalCapability(UltraSSDAvailable, "eastus") {
+					if sku.HasZonalCapability(UltraSSDAvailable) {
 						t.Errorf("expected standard_d2_v2 not to support ultra ssd")
 					}
-					if sku.HasZonalCapability(UltraSSDAvailable, "westus2") {
-						t.Errorf("expected standard_d2_v2 not to support ultra ssd in wrong region")
+					if sku.HasZonalCapability("NotExistingCapability") {
+						t.Errorf("expected standard_d2_v2 not to support non-existent capability")
 					}
 					if sku.HasCapability(EphemeralOSDisk) {
 						t.Errorf("expected standard_d2_v2 not to support ephemeral os")

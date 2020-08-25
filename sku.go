@@ -53,6 +53,9 @@ const (
 	// UltraSSDAvailable identifies the capability for ultra ssd
 	// enablement.
 	UltraSSDAvailable = "UltraSSDAvailable"
+	// CachedDiskBytes identifies the maximum size of the cach disk for
+	// a vm.
+	CachedDiskBytes = "CachedDiskBytes"
 )
 
 // ErrCapabilityNotFound will be returned when a capability could not be
@@ -95,6 +98,22 @@ func (s *SKU) vCPU() (int64, error) {
 // Memory returns the amount of memory this SKU supports.
 func (s *SKU) Memory() (int64, error) {
 	return s.GetCapabilityQuantity(MemoryGB)
+}
+
+func (s *SKU) MaxCachedDiskBytes() (int64, error) {
+	return s.GetCapabilityQuantity(CachedDiskBytes)
+}
+
+func (s *SKU) IsEncryptionAtHostSupported() bool {
+	return s.HasCapability(EncryptionAtHost)
+}
+
+func (s *SKU) IsUltraSSDAvailable() bool {
+	return s.HasZonalCapability(UltraSSDAvailable)
+}
+
+func (s *SKU) IsEphemeralOSDiskSupported() bool {
+	return s.HasCapability(EphemeralOSDisk)
 }
 
 // GetCapabilityQuantity retrieves and parses the value of a numeric
@@ -144,29 +163,25 @@ func (s *SKU) HasCapability(name string) bool {
 // available.
 // TODO(ace): update this function signature/behavior if necessary to
 // account for per-zone availability.
-func (s *SKU) HasZonalCapability(name, location string) bool {
+func (s *SKU) HasZonalCapability(name string) bool {
 	if s.LocationInfo == nil {
 		return false
 	}
 	for _, locationInfo := range *s.LocationInfo {
-		if strings.EqualFold(*locationInfo.Location, location) {
-			if locationInfo.ZoneDetails == nil {
-				return false
+		if locationInfo.ZoneDetails == nil {
+			continue
+		}
+		for _, zoneDetails := range *locationInfo.ZoneDetails {
+			if zoneDetails.Capabilities == nil {
+				continue
 			}
-			for _, zoneDetails := range *locationInfo.ZoneDetails {
-				if zoneDetails.Capabilities == nil {
-					break
-				}
-				for _, capability := range *zoneDetails.Capabilities {
-					if capability.Name != nil && strings.EqualFold(*capability.Name, name) {
-						if capability.Value != nil && strings.EqualFold(*capability.Value, string(CapabilitySupported)) {
-							return true
-						}
-						break
+			for _, capability := range *zoneDetails.Capabilities {
+				if capability.Name != nil && strings.EqualFold(*capability.Name, name) {
+					if capability.Value != nil && strings.EqualFold(*capability.Value, string(CapabilitySupported)) {
+						return true
 					}
 				}
 			}
-			return false
 		}
 	}
 	return false
