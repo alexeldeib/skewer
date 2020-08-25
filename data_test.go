@@ -122,10 +122,10 @@ func Test_Data(t *testing.T) {
 					if memory, err := sku.Memory(); memory != 16 || err != nil {
 						t.Errorf("expected standard_d4s_v3 to have 16GB of memory and parse successfully, got value '%d' and error '%s'", memory, err)
 					}
-					if quantity, err := sku.GetCapabilityQuantity("ShouldNotBePresent"); quantity != -1 || !errors.As(err, &errCapabilityNotFound) {
+					if quantity, err := sku.GetCapabilityIntegerQuantity("ShouldNotBePresent"); quantity != -1 || !errors.As(err, &errCapabilityNotFound) {
 						t.Errorf("expected standard_d4s_v3 not to have a non-existent capability, got value '%d' and error '%s'", quantity, err)
 					}
-					if quantity, err := sku.GetCapabilityQuantity("PremiumIO"); quantity != -1 || !errors.As(err, &errCapabilityValueNil) {
+					if quantity, err := sku.GetCapabilityIntegerQuantity("PremiumIO"); quantity != -1 || !errors.As(err, &errCapabilityValueNil) {
 						t.Errorf("expected standard_d4s_v3 to fail parsing value for boolean premiumIO as int, got value '%d' and error '%s'", quantity, err)
 					}
 					if !sku.HasZonalCapability(UltraSSDAvailable) {
@@ -188,12 +188,12 @@ func Test_Data(t *testing.T) {
 					if memory, err := sku.Memory(); memory != 7 || err != nil {
 						t.Errorf("expected standard_d2_v2 to have 7GB of memory and parse successfully, got value '%d' and error '%s'", memory, err)
 					}
-					if quantity, err := sku.GetCapabilityQuantity("ShouldNotBePresent"); quantity != -1 ||
+					if quantity, err := sku.GetCapabilityIntegerQuantity("ShouldNotBePresent"); quantity != -1 ||
 						!errors.As(err, &errCapabilityNotFound) ||
 						err.Error() != "ShouldNotBePresentCapabilityNotFound" {
 						t.Errorf("expected standard_d2_v2 not to have a non-existent capability, got value '%d' and error '%s'", quantity, err)
 					}
-					if quantity, err := sku.GetCapabilityQuantity("PremiumIO"); quantity != -1 ||
+					if quantity, err := sku.GetCapabilityIntegerQuantity("PremiumIO"); quantity != -1 ||
 						!errors.As(err, &errCapabilityValueNil) ||
 						err.Error() != "PremiumIOCapabilityValueParse: failed to parse string 'False' as int64, error: 'strconv.ParseInt: parsing \"False\": invalid syntax'" { // nolint:lll
 						t.Errorf("expected standard_d2_v2 to fail parsing value for boolean premiumIO as int, got value '%d' and error '%s'", quantity, err)

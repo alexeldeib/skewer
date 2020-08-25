@@ -58,7 +58,7 @@ func Test_SKU_GetCapabilityQuantity(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			sku := SKU(tc.sku)
-			quantity, err := sku.GetCapabilityQuantity(tc.capability)
+			quantity, err := sku.GetCapabilityIntegerQuantity(tc.capability)
 			if tc.err != "" {
 				if err == nil {
 					t.Errorf("expected failure with error '%s' but did not occur", tc.err)
